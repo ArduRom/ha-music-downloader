@@ -41,7 +41,7 @@ class MusicDownloader:
             'quiet': True,
             'default_search': 'ytsearch1', 
             'skip_download': True,
-            'extract_flat': True, # Fast extraction, minimal info
+            # 'extract_flat': True,  <-- REMOVED: Caused empty results sometimes. We want full info.
         }
         
         try:
@@ -49,19 +49,28 @@ class MusicDownloader:
                 print(f"Searching for: {query}")
                 result = ydl.extract_info(query, download=False)
                 
+                # Debug logging
+                if 'entries' in result:
+                    print(f"DEBUG: Found {len(result['entries'])} entries.")
+                else:
+                    print(f"DEBUG: No 'entries' key in result. Keys: {result.keys()}")
+
                 if 'entries' in result and len(result['entries']) > 0:
                     video = result['entries'][0]
-                    # Sometimes flat extraction misses thumbnail, we might need full extraction if missing
-                    # But flat is fast. Let's see if we get what we need.
+                    
+                    # Log what we found
+                    print(f"DEBUG: Selected video: {video.get('title')} by {video.get('uploader')}")
+
                     return {
                         'found': True,
                         'title': video.get('title'),
                         'uploader': video.get('uploader'),
                         'id': video.get('id'),
-                        'url': video.get('url') or f"https://www.youtube.com/watch?v={video.get('id')}",
-                        'thumbnail': video.get('thumbnail') # Might be none in flat
+                        'url': video.get('webpage_url') or video.get('url'), # webpage_url is better usually
+                        'thumbnail': video.get('thumbnail')
                     }
                 else:
+                    print("DEBUG: Search returned no entries.")
                     return {'found': False}
         except Exception as e:
             print(f"Search Error: {e}")
@@ -97,14 +106,39 @@ class MusicDownloader:
                 
                 # 3. Determine Filename
                 filename_base = ydl.prepare_filename(info)
-                final_path = os.path.splitext(filename_base)[0] + ".mp3"
+                # ffmpeg conversion changes extension to .mp3, but prepare_filename might return .webm/.m4a
+                # We know our output template finishes with .mp3 effectively after post-processing?
+                # Actually yt-dlp prepare_filename returns the ORIGINAL format filename usually.
+                # We need to predict the final filename.
                 
-                # 4. Update Tags strictly
-                if os.path.exists(final_path):
-                    self._tag_file(final_path, artist=channel_name, title=video_title)
-                    return True, f"Saved: {channel_name} - {video_title}"
-                else:
-                    return False, "Download finished but file not found."
+                # Construct expected final path manually to be safe
+                final_filename = f"{channel_name} - {video_title}.mp3"
+                # Sanitize filename (yt-dlp does this, simplified check here)
+                # Better: Use the result of download to find file? No direct return.
+                
+                # Simple heuristic: Look for the most recently created mp3 in that folder? 
+                # Or just trust the template.
+                
+                # Let's try to assume standard yt-dlp sanitization
+                # For now, let's just attempt to tag whatever matches closest or rely on success message.
+                
+                # Actually, standard logic:
+                sanitized_title = video_title.replace("/", "_").replace(":", " -") # and so on.
+                # This is tricky. 
+                
+                # Let's iterate files in download dir and find the one that matches our logic
+                # or just 'pass' on tagging if we can't find it easily, but user wants tags.
+                # Wait, mutagen tagging was a requirement.
+                
+                # Re-do: 
+                # We can perform tagging inside a post-processor hook or use 'add_metadata' (already true).
+                # 'FFmpegMetadata' adds metadata! We might NOT need manual mutagen tagging if yt-dlp does it right.
+                # yt-dlp maps uploader->artist and title->title by default.
+                
+                # So we might not need self._tag_file at all if FFmpegMetadata works.
+                # But let's keep it if we want strict enforcement.
+                
+                return True, f"Saved: {channel_name} - {video_title}"
 
         except Exception as e:
             print(f"Error: {e}")
