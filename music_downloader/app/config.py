@@ -26,6 +26,7 @@ IS_HA = os.path.exists(OPTIONS_PATH) or os.path.exists("/app/server.py")
 if IS_HA:
     # Read from Add-on Config
     DOWNLOAD_DIR = get_ha_option("download_dir", "/share/downloads/Music")
+    OPENAI_API_KEY = get_ha_option("openai_api_key", "")
     
     # In Docker/Alpine, ffmpeg is installed via APK to /usr/bin/ffmpeg
     # We can rely on PATH or specify explicitly.
@@ -35,6 +36,7 @@ if IS_HA:
 else:
     # LOCAL WINDOWS MODE
     DOWNLOAD_DIR = os.path.join(BASE_DIR, "downloads")
+    OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
     BIN_DIR = os.path.join(BASE_DIR, "bin")
     FFMPEG_BIN = os.path.join(BIN_DIR, "ffmpeg.exe")
     FFPROBE_BIN = os.path.join(BIN_DIR, "ffprobe.exe")
