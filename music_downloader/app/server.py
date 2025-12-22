@@ -41,4 +41,4 @@ def download():
 
 if __name__ == '__main__':
     print(f"Starting server on 0.0.0.0:5000. Download Dir: {config.DOWNLOAD_DIR}")
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=False)
