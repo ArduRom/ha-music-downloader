@@ -17,12 +17,6 @@ RUN pip3 install -r requirements.txt --break-system-packages
 
 COPY app /app
 
-# NUCLEAR OPTION: Create run.sh inside Docker to guarantee LF line endings
-# This avoids any Windows/Git CRLF issues completely.
-RUN echo '#!/bin/bash' > /run.sh && \
-  echo 'echo "Starting Music Downloader (v1.1.6 - Generated)..."' >> /run.sh && \
-  echo 'cd /app' >> /run.sh && \
-  echo 'python3 server.py' >> /run.sh && \
-  chmod a+x /run.sh
-
-CMD [ "/run.sh" ]
+# Directly start Python. 
+# Since init: false is set in config.yaml, this will be PID 1.
+CMD [ "python3", "-u", "server.py" ]
