@@ -154,7 +154,8 @@
             document.getElementById('resultCard').style.display = 'none';
 
             try {
-                const response = await fetch('/search', {
+                // IMPORTANT: Relative path for Ingress compatibility!
+                const response = await fetch('search', {
                     method: 'POST', body: JSON.stringify({ query: query }),
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -178,7 +179,6 @@
         function showResult(result) {
             currentUrl = result.url;
             const content = document.getElementById('resultContent');
-            // Use placeholder if thumbnail missing
             const thumb = result.thumbnail || 'https://via.placeholder.com/320x180?text=No+Thumbnail';
 
             content.innerHTML = `
@@ -210,7 +210,8 @@
             status.className = "";
 
             try {
-                const response = await fetch('/download', {
+                // IMPORTANT: Relative path for Ingress compatibility!
+                const response = await fetch('download', {
                     method: 'POST', body: JSON.stringify({ url: currentUrl }),
                     headers: { 'Content-Type': 'application/json' }
                 });
