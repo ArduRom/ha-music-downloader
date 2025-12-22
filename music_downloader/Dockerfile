@@ -5,7 +5,7 @@ FROM python:3.9-alpine
 # git: required for pip installing from git
 # dos2unix: helpful for script line endings
 # nodejs: required by yt-dlp for JS execution (resolves warnings/errors)
-RUN apk add --no-cache ffmpeg git dos2unix nodejs
+RUN apk add --no-cache ffmpeg git dos2unix
 
 WORKDIR /app
 
