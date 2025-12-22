@@ -26,7 +26,8 @@
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
             width: 100%;
-            max-width: 400px;
+            max-width: 450px;
+            /* Slightly wider for editor */
             text-align: center;
         }
 
@@ -45,6 +46,20 @@
             color: white;
             box-sizing: border-box;
             font-size: 1rem;
+        }
+
+        label {
+            display: block;
+            text-align: left;
+            margin-bottom: 0.3rem;
+            color: #aaa;
+            font-size: 0.9rem;
+        }
+
+        .edit-input {
+            margin-bottom: 0.8rem !important;
+            /* Tighter spacing in editor */
+            background-color: #2C2E33 !important;
         }
 
         button {
@@ -73,8 +88,10 @@
         #resultCard {
             margin-top: 1.5rem;
             padding: 1rem;
-            background: #2C2E33;
+            background: #1a1b1e;
+            /* Darker to distinguish card */
             border-radius: 8px;
+            border: 1px solid #373a40;
             display: none;
             text-align: left;
         }
@@ -82,18 +99,6 @@
         #resultCard img {
             width: 100%;
             border-radius: 4px;
-            margin-bottom: 0.5rem;
-        }
-
-        .result-title {
-            font-weight: bold;
-            font-size: 1.1rem;
-            margin-bottom: 0.25rem;
-        }
-
-        .result-artist {
-            color: #aaa;
-            font-size: 0.9rem;
             margin-bottom: 1rem;
         }
 
@@ -124,10 +129,17 @@
             <button id="searchBtn" onclick="searchMusic()">Search Music</button>
         </div>
 
-        <!-- Result Section -->
+        <!-- Editor/Result Section -->
         <div id="resultCard">
-            <div id="resultContent"></div>
-            <button id="downloadBtn" onclick="downloadMusic()">Download Selection</button>
+            <img id="coverPreview" src="" alt="Cover">
+
+            <label>Title</label>
+            <input type="text" id="editTitle" class="edit-input">
+
+            <label>Artists (comma separated)</label>
+            <input type="text" id="editArtists" class="edit-input">
+
+            <button id="downloadBtn" onclick="downloadMusic()">Confirm & Download</button>
             <button onclick="resetSearch()" style="background-color: #373a40; margin-top: 0.5rem;">Cancel</button>
         </div>
 
@@ -154,7 +166,6 @@
             document.getElementById('resultCard').style.display = 'none';
 
             try {
-                // IMPORTANT: Relative path for Ingress compatibility!
                 const response = await fetch('search', {
                     method: 'POST', body: JSON.stringify({ query: query }),
                     headers: { 'Content-Type': 'application/json' }
@@ -162,7 +173,7 @@
                 const data = await response.json();
 
                 if (data.success && data.result) {
-                    showResult(data.result);
+                    showEditor(data.result);
                     status.innerText = "";
                 } else {
                     status.innerText = "No results found.";
@@ -176,16 +187,26 @@
             }
         }
 
-        function showResult(result) {
+        function showEditor(result) {
             currentUrl = result.url;
-            const content = document.getElementById('resultContent');
-            const thumb = result.thumbnail || 'https://via.placeholder.com/320x180?text=No+Thumbnail';
 
-            content.innerHTML = `
-                <img src="${thumb}" alt="Cover">
-                <div class="result-title">${result.title}</div>
-                <div class="result-artist">${result.uploader}</div>
-            `;
+            // Set Cover
+            const thumb = result.thumbnail || 'https://via.placeholder.com/320x180?text=No+Thumbnail';
+            document.getElementById('coverPreview').src = thumb;
+
+            // Pre-fill fields with Proposed Metadata
+            document.getElementById('editTitle').value = result.proposal_title;
+
+            // Join artists list to string for editing: "A, B, C"
+            let artistsStr = "";
+            if (Array.isArray(result.proposal_artists)) {
+                artistsStr = result.proposal_artists.join(", ");
+            } else {
+                artistsStr = result.proposal_artists; // Fallback should be list though
+            }
+            document.getElementById('editArtists').value = artistsStr;
+
+            // Show UI
             document.getElementById('searchSection').style.display = 'none';
             document.getElementById('resultCard').style.display = 'block';
         }
@@ -204,15 +225,26 @@
             const btn = document.getElementById('downloadBtn');
             const status = document.getElementById('status');
 
+            // Read values from Editor
+            const manualTitle = document.getElementById('editTitle').value.trim();
+            const artistsRaw = document.getElementById('editArtists').value;
+
+            // Convert artists string back to list. Split by comma.
+            const manualArtists = artistsRaw.split(',').map(s => s.trim()).filter(s => s.length > 0);
+
             btn.disabled = true;
             btn.innerText = "Downloading...";
             status.innerText = "Downloading... check HA /share folder soon.";
             status.className = "";
 
             try {
-                // IMPORTANT: Relative path for Ingress compatibility!
                 const response = await fetch('download', {
-                    method: 'POST', body: JSON.stringify({ url: currentUrl }),
+                    method: 'POST',
+                    body: JSON.stringify({
+                        url: currentUrl,
+                        title: manualTitle,
+                        artists: manualArtists
+                    }),
                     headers: { 'Content-Type': 'application/json' }
                 });
                 const data = await response.json();
@@ -229,7 +261,7 @@
                 status.innerText = "Error: " + e;
             } finally {
                 btn.disabled = false;
-                btn.innerText = "Download Selection";
+                btn.innerText = "Confirm & Download";
             }
         }
     </script>

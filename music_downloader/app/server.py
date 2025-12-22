@@ -27,12 +27,16 @@ def search():
 def download():
     data = request.json
     url = data.get('url')
+    manual_artists = data.get('artists') # Expecting list of strings
+    manual_title = data.get('title')     # Expecting string
     
     if not url:
         return jsonify({"success": False, "message": "No URL provided"}), 400
         
-    print(f"Received download request for: {url}")
-    success, message = loader.download_track(url)
+    print(f"Received download request for: {url} | Artists: {manual_artists} | Title: {manual_title}")
+    
+    # Pass metadata to downloader
+    success, message = loader.download_track(url, manual_artists, manual_title)
     
     if success:
         return jsonify({"success": True, "message": message})
