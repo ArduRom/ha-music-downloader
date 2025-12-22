@@ -61,11 +61,20 @@ class MusicDownloader:
             Video Title: "{title}"
             Channel Name: "{channel}"
             
+            Task:
+            1. Identify the true Artist(s) and Song Title.
+            2. Identify the Album name (if not found, use "Single" or leave empty).
+            3. Identify the Release Year.
+            4. CLEAN the Title: Remove ALL junk like:
+               - "(Official Video)", "(Official Audio)", "(Lyrics)", "(Live)", "(HD)", "(4K)"
+               - "[Official Video]", "[Audio]", etc.
+               - "ft.", "feat.", "featuring" (Move these artists to the artist list instead)
+            
             Return STRICTLY valid JSON with these keys:
-            - "artist": List of strings (Main artist first, then featured)
-            - "title": String (Song title only, remove 'feat.', 'official video' etc)
-            - "album": String (Guess the album name if possible, otherwise use Single or leave empty)
-            - "year": String (Year of release if found, else empty)
+            - "artist": List of strings (Main artist first, then featured guests)
+            - "title": String (Cleaned song title)
+            - "album": String
+            - "year": String
             
             Example JSON:
             {{
