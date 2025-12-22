@@ -63,24 +63,28 @@ class MusicDownloader:
             
             Task:
             1. Identify the true Artist(s) and Song Title.
-            2. Identify the Album name (if not found, use "Single" or leave empty).
-            3. Identify the Release Year.
-            4. CLEAN the Title: Remove ALL junk like:
-               - "(Official Video)", "(Official Audio)", "(Lyrics)", "(Live)", "(HD)", "(4K)"
-               - "[Official Video]", "[Audio]", etc.
+            2. Identify the Release Year.
+            3. CLEAN the Title: Remove ALL junk like:
+               - "(Official Video)", "(Lyrics)", "(Live)", "(HD)", "(4K)", "Official Audio"
                - "ft.", "feat.", "featuring" (Move these artists to the artist list instead)
+            
+            4. DETERMINE ALBUM:
+               - If it is CLEARLY from a specific album (e.g. "from the album 'Cloud Nine'"), use that album name.
+               - If it is a Single or the album is unknown, SET THE ALBUM NAME TO THE SONG TITLE.
+               - DO NOT use "- Single" suffix.
+               - Example: If Title is "Firestone", Album should be "Firestone".
             
             Return STRICTLY valid JSON with these keys:
             - "artist": List of strings (Main artist first, then featured guests)
             - "title": String (Cleaned song title)
-            - "album": String
+            - "album": String (See Rule 4)
             - "year": String
             
             Example JSON:
             {{
               "artist": ["Martin Garrix", "Macklemore"],
               "title": "Summer Days",
-              "album": "Summer Days - Single",
+              "album": "Summer Days",
               "year": "2019"
             }}
             """
