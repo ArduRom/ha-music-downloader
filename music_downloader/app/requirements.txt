@@ -1,4 +1,4 @@
-yt-dlp[default] @ git+https://github.com/yt-dlp/yt-dlp.git@master
+https://github.com/yt-dlp/yt-dlp/archive/master.zip
 mutagen
 flask
 requests
