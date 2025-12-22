@@ -1,15 +1,17 @@
-FROM python:3.9-alpine
+FROM python:3.9-slim
 
-# Install system dependencies
-# ffmpeg: required for audio conversation
-# git: required for pip installing from git
-# dos2unix: helpful for script line endings
-# nodejs: required by yt-dlp for JS execution (resolves warnings/errors)
-RUN apk add --no-cache ffmpeg git dos2unix
+# Install system dependencies (Debian based now)
+# ffmpeg: audio conversion
+# git: required for some pip packages
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    ffmpeg \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy requirements first to leverage Docker cache
+# Copy requirements first
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -20,5 +22,5 @@ COPY config.py .
 # Expose port (Internal for Ingress)
 EXPOSE 8099
 
-# Start command (Direct Python execution for signal handling)
+# Start command
 CMD ["python3", "-u", "server.py"]
