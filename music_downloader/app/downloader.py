@@ -121,10 +121,17 @@ class MusicDownloader:
     def search_video(self, query):
         search_opts = {
             'quiet': True,
-            'default_search': 'ytsearch15', # Request 15 results
+            'default_search': 'ytsearch15', 
             'skip_download': True,
             'ignoreerrors': True,
-            'extract_flat': True, # Faster, returns minimal info for list
+            'extract_flat': False, # Changed to False to ensure we get 'uploader' and other metadata
+            # Copy robust network options
+            'source_address': '0.0.0.0',
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['android', 'web'],
+                }
+            }
         }
         try:
             with yt_dlp.YoutubeDL(search_opts) as ydl:
