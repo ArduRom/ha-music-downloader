@@ -31,6 +31,8 @@ def download():
     url = data.get('url')
     manual_artists = data.get('artists')
     manual_title = data.get('title')
+    manual_album = data.get('album')
+    manual_year = data.get('year')
     
     if not url:
         return jsonify({"success": False, "message": "No URL provided"}), 400
@@ -41,7 +43,7 @@ def download():
     def background_task():
         print(f"Starting background download for {url}")
         try:
-            loader.download_track(url, manual_artists, manual_title)
+            loader.download_track(url, manual_artists, manual_title, manual_album, manual_year)
             print(f"Background download finished for {url}")
         except Exception as e:
             print(f"Background download failed: {e}")
