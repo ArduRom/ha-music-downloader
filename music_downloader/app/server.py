@@ -1,9 +1,13 @@
 from flask import Flask, render_template, request, jsonify
+from werkzeug.exceptions import HTTPException
 import config
 from downloader import MusicDownloader
 import os
+import threading
+import traceback
 
 app = Flask(__name__)
+# Fix: Ensure config is loaded before we start
 loader = MusicDownloader()
 
 @app.route('/')
@@ -18,7 +22,6 @@ def search():
         return jsonify({"success": False, "message": "No query provided"}), 400
     
     result = loader.search_video(query)
-    # Return whatever search_video returns (now containing 'results' list)
     return jsonify(result)
 
 @app.route('/analyze', methods=['POST'])
@@ -32,8 +35,6 @@ def analyze():
         
     proposal = loader.analyze_metadata(title, channel)
     return jsonify({"success": True, "result": proposal})
-
-import threading
 
 @app.route('/download', methods=['POST'])
 def download():
@@ -67,16 +68,15 @@ def download():
 
 @app.errorhandler(Exception)
 def handle_exception(e):
-    # Pass through HTTP errors
+    # Pass through HTTP errors like 404
     if isinstance(e, HTTPException):
-        return ignored
-    # Return JSON for non-HTTP errors
+        print(f"HTTP ERROR: {e}")
+        return e
+        
+    # Generic error handling for 500s
     print(f"SERVER ERROR: {e}")
-    import traceback
     traceback.print_exc()
     return jsonify({"success": False, "message": str(e), "error": "Internal Server Error"}), 500
-
-from werkzeug.exceptions import HTTPException
 
 if __name__ == '__main__':
     print(f"Starting server on 0.0.0.0:8099. Download Dir: {config.DOWNLOAD_DIR}")
