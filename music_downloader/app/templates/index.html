@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Downloader</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            background-color: #1a1b1e;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .container {
+            background-color: #25262b;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        h1 {
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 1rem;
+            border-radius: 8px;
+            border: 1px solid #373a40;
+            background-color: #1a1b1e;
+            color: white;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            background-color: #228be6;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s;
+            margin-top: 0.5rem;
+        }
+
+        button:hover {
+            background-color: #1c7ed6;
+        }
+
+        button:disabled {
+            background-color: #373a40;
+            cursor: not-allowed;
+        }
+
+        #resultCard {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #2C2E33;
+            border-radius: 8px;
+            display: none;
+            text-align: left;
+        }
+
+        #resultCard img {
+            width: 100%;
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+        }
+
+        .result-title {
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .result-artist {
+            color: #aaa;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        #status {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            min-height: 1.2em;
+        }
+
+        .success {
+            color: #40c057;
+        }
+
+        .error {
+            color: #fa5252;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Music Downloader</h1>
+
+        <!-- Search Section -->
+        <div id="searchSection">
+            <input type="text" id="searchInput" placeholder="Search (e.g. 'Artist - Song')..."
+                onkeypress="handleEnter(event)">
+            <button id="searchBtn" onclick="searchMusic()">Search Music</button>
+        </div>
+
+        <!-- Result Section -->
+        <div id="resultCard">
+            <div id="resultContent"></div>
+            <button id="downloadBtn" onclick="downloadMusic()">Download Selection</button>
+            <button onclick="resetSearch()" style="background-color: #373a40; margin-top: 0.5rem;">Cancel</button>
+        </div>
+
+        <div id="status"></div>
+    </div>
+
+    <script>
+        let currentUrl = null;
+
+        function handleEnter(e) {
+            if (e.key === 'Enter') searchMusic();
+        }
+
+        async function searchMusic() {
+            const query = document.getElementById('searchInput').value.trim();
+            const status = document.getElementById('status');
+            const searchBtn = document.getElementById('searchBtn');
+
+            if (!query) return;
+
+            searchBtn.disabled = true;
+            status.innerText = "Searching YouTube...";
+            status.className = "";
+            document.getElementById('resultCard').style.display = 'none';
+
+            try {
+                const response = await fetch('/search', {
+                    method: 'POST', body: JSON.stringify({ query: query }),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+
+                if (data.success && data.result) {
+                    showResult(data.result);
+                    status.innerText = "";
+                } else {
+                    status.innerText = "No results found.";
+                    status.className = "error";
+                }
+            } catch (e) {
+                status.innerText = "Error: " + e;
+                status.className = "error";
+            } finally {
+                searchBtn.disabled = false;
+            }
+        }
+
+        function showResult(result) {
+            currentUrl = result.url;
+            const content = document.getElementById('resultContent');
+            // Use placeholder if thumbnail missing
+            const thumb = result.thumbnail || 'https://via.placeholder.com/320x180?text=No+Thumbnail';
+
+            content.innerHTML = `
+                <img src="${thumb}" alt="Cover">
+                <div class="result-title">${result.title}</div>
+                <div class="result-artist">${result.uploader}</div>
+            `;
+            document.getElementById('searchSection').style.display = 'none';
+            document.getElementById('resultCard').style.display = 'block';
+        }
+
+        function resetSearch() {
+            document.getElementById('resultCard').style.display = 'none';
+            document.getElementById('searchSection').style.display = 'block';
+            document.getElementById('status').innerText = "";
+            document.getElementById('searchInput').value = "";
+            currentUrl = null;
+        }
+
+        async function downloadMusic() {
+            if (!currentUrl) return;
+
+            const btn = document.getElementById('downloadBtn');
+            const status = document.getElementById('status');
+
+            btn.disabled = true;
+            btn.innerText = "Downloading...";
+            status.innerText = "Downloading... check HA /share folder soon.";
+            status.className = "";
+
+            try {
+                const response = await fetch('/download', {
+                    method: 'POST', body: JSON.stringify({ url: currentUrl }),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    status.innerText = data.message;
+                    status.className = "success";
+                    setTimeout(resetSearch, 3000);
+                } else {
+                    status.innerText = "Error: " + data.message;
+                    status.className = "error";
+                }
+            } catch (e) {
+                status.innerText = "Error: " + e;
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Download Selection";
+            }
+        }
+    </script>
+</body>
+
+</html>

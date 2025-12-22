@@ -1,0 +1,22 @@
+name: "Youtube Music Downloader"
+version: "1.0.0"
+slug: "yt_music_downloader"
+description: "Downloads high-quality MP3s from YouTube with correct Artist/Title tags."
+url: "https://github.com/simon/music-downloader"
+startup: application
+arch:
+  - aarch64
+  - amd64
+  - armhf
+  - armv7
+  - i386
+options:
+  download_dir: "/share/downloads/Music"
+  format: "bestaudio/best"
+schema:
+  download_dir: str
+  format: str
+ports:
+  5000/tcp: 5000
+map:
+  - share:rw
