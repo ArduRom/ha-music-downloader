@@ -52,30 +52,30 @@ class MusicDownloader:
              print("DEBUG: No OpenAI API Key found.")
              return None
 
-        import requests
-        import json
-        
-        prompt = f"""
-        Analyze the following YouTube video info and extract music metadata.
-        Video Title: "{title}"
-        Channel Name: "{channel}"
-        
-        Return STRICTLY valid JSON with these keys:
-        - "artist": List of strings (Main artist first, then featured)
-        - "title": String (Song title only, remove 'feat.', 'official video' etc)
-        - "album": String (Guess the album name if possible, otherwise use Single or leave empty)
-        - "year": String (Year of release if found, else empty)
-        
-        Example JSON:
-        {{
-          "artist": ["Martin Garrix", "Macklemore"],
-          "title": "Summer Days",
-          "album": "Summer Days - Single",
-          "year": "2019"
-        }}
-        """
-        
         try:
+            import requests
+            import json
+            
+            prompt = f"""
+            Analyze the following YouTube video info and extract music metadata.
+            Video Title: "{title}"
+            Channel Name: "{channel}"
+            
+            Return STRICTLY valid JSON with these keys:
+            - "artist": List of strings (Main artist first, then featured)
+            - "title": String (Song title only, remove 'feat.', 'official video' etc)
+            - "album": String (Guess the album name if possible, otherwise use Single or leave empty)
+            - "year": String (Year of release if found, else empty)
+            
+            Example JSON:
+            {{
+              "artist": ["Martin Garrix", "Macklemore"],
+              "title": "Summer Days",
+              "album": "Summer Days - Single",
+              "year": "2019"
+            }}
+            """
+            
             headers = {
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json"

@@ -179,7 +179,7 @@
                     showEditor(data.result);
                     status.innerText = "";
                 } else {
-                    status.innerText = "No results found.";
+                    status.innerText = data.message || "No results found.";
                     status.className = "error";
                 }
             } catch (e) {
