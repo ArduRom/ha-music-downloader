@@ -6,8 +6,7 @@ RUN \
   apk add --no-cache \
   python3 \
   py3-pip \
-  ffmpeg \
-  dos2unix
+  ffmpeg
 
 # Python 3 HTTP Server serves the current directory
 WORKDIR /app
@@ -17,10 +16,6 @@ COPY app/requirements.txt /app/
 RUN pip3 install -r requirements.txt --break-system-packages
 
 COPY app /app
-# Copy run.sh to ROOT /run.sh (Standard location)
-COPY run.sh /run.sh
 
-# Fix Windows line endings and permissions
-RUN dos2unix /run.sh && chmod a+x /run.sh
-
-CMD [ "/run.sh" ]
+# Run Python directly, bypassing shell scripts to avoid CRLF issues
+CMD [ "python3", "-u", "server.py" ]
