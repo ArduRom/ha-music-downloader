@@ -12,14 +12,15 @@ RUN \
 # Python 3 HTTP Server serves the current directory
 WORKDIR /app
 
-# Copy data for add-on (requirements first for cache)
+# Copy data for add-on
 COPY app/requirements.txt /app/
 RUN pip3 install -r requirements.txt --break-system-packages
 
 COPY app /app
-COPY run.sh /app/run.sh
+# Copy run.sh to ROOT /run.sh (Standard location)
+COPY run.sh /run.sh
 
-# Make run script executable and fix Windows line endings (CRLF)
-RUN dos2unix /app/run.sh && chmod a+x /app/run.sh
+# Fix Windows line endings and permissions
+RUN dos2unix /run.sh && chmod a+x /run.sh
 
-CMD [ "/app/run.sh" ]
+CMD [ "/run.sh" ]
