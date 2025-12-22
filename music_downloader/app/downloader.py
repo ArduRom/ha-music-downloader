@@ -198,7 +198,7 @@ class MusicDownloader:
             
             final_filename = f"{filename_artist_str} - {title}.mp3".replace("/", "_").replace("\\", "_")
             
-            dl_opts = self.ydl_opts.copy() # Safe copy
+            dl_opts = copy.deepcopy(self.base_opts) # Safe Deep Copy
             dl_opts['outtmpl'] = os.path.join(config.DOWNLOAD_DIR, f"{filename_artist_str} - {title}.%(ext)s")
             
             print(f"Starting Download -> {final_filename}")
