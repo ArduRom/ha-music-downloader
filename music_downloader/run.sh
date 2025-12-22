@@ -1,12 +1,10 @@
-#!/usr/bin/with-contenv bashio
+#!/bin/bash
 
-echo "Starting Music Downloader Add-on (v1.1.3)..."
+echo "Starting Music Downloader Add-on (v1.1.4)..."
 
-DOWNLOAD_PATH=$(bashio::config 'download_dir')
-echo "Download directory configured as: $DOWNLOAD_PATH"
+# Note: Config layout is handled by Python's config.py reading /data/options.json
+# We don't need bashio here, which avoids the s6-overlay-suexec PID 1 error in some cases.
 
-# Ensure /app is working dir
 cd /app
-
 echo "Starting Flask Server..."
 python3 server.py
