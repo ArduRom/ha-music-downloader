@@ -40,5 +40,5 @@ def download():
         return jsonify({"success": False, "message": message}), 500
 
 if __name__ == '__main__':
-    print(f"Starting server on 0.0.0.0:5000. Download Dir: {config.DOWNLOAD_DIR}")
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    print(f"Starting server on 0.0.0.0:8099. Download Dir: {config.DOWNLOAD_DIR}")
+    app.run(host='0.0.0.0', port=8099, debug=False)
