@@ -23,25 +23,35 @@ def search():
     else:
         return jsonify({"success": False, "message": "No results found."})
 
+import threading
+
 @app.route('/download', methods=['POST'])
 def download():
     data = request.json
     url = data.get('url')
-    manual_artists = data.get('artists') # Expecting list of strings
-    manual_title = data.get('title')     # Expecting string
+    manual_artists = data.get('artists')
+    manual_title = data.get('title')
     
     if not url:
         return jsonify({"success": False, "message": "No URL provided"}), 400
         
-    print(f"Received download request for: {url} | Artists: {manual_artists} | Title: {manual_title}")
+    print(f"Received download request for: {url}")
     
-    # Pass metadata to downloader
-    success, message = loader.download_track(url, manual_artists, manual_title)
+    # Define wrapper for background execution
+    def background_task():
+        print(f"Starting background download for {url}")
+        try:
+            loader.download_track(url, manual_artists, manual_title)
+            print(f"Background download finished for {url}")
+        except Exception as e:
+            print(f"Background download failed: {e}")
+
+    # Start independent thread
+    thread = threading.Thread(target=background_task)
+    thread.daemon = True # ensure thread dies if main process dies
+    thread.start()
     
-    if success:
-        return jsonify({"success": True, "message": message})
-    else:
-        return jsonify({"success": False, "message": message}), 500
+    return jsonify({"success": True, "message": "Download started in background. Check /media folder soon."})
 
 @app.errorhandler(Exception)
 def handle_exception(e):
