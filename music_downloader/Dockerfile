@@ -1,17 +1,17 @@
-FROM python:3.9-slim
+FROM python:3.9-alpine
 
-# Install system dependencies (Debian based now)
-# ffmpeg: audio conversion
-# git: required for some pip packages
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    ffmpeg \
-    git \
-    && rm -rf /var/lib/apt/lists/*
+# Install system dependencies
+# ffmpeg: required for audio conversation
+# git: required for pip installing from git
+# dos2unix: helpful for script line endings
+RUN apk add --no-cache ffmpeg git dos2unix
 
 WORKDIR /app
 
-# Copy requirements first
+# Upgrade pip to ensure wheel building works (helps with weird Alpine issues)
+RUN pip install --upgrade pip
+
+# Copy requirements first to leverage Docker cache
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -22,5 +22,5 @@ COPY config.py .
 # Expose port (Internal for Ingress)
 EXPOSE 8099
 
-# Start command
+# Start command (Direct Python execution for signal handling)
 CMD ["python3", "-u", "server.py"]
