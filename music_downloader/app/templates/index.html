@@ -290,7 +290,7 @@
             loader.style.display = "block";
 
             try {
-                const response = await fetch('/search', {
+                const response = await fetch('search', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ query: query })
@@ -350,7 +350,7 @@
 
             // Call Analyze
             try {
-                const response = await fetch('/analyze', {
+                const response = await fetch('analyze', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -401,7 +401,7 @@
             };
 
             try {
-                const response = await fetch('/download', {
+                const response = await fetch('download', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
