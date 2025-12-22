@@ -116,7 +116,15 @@ class MusicDownloader:
             artists = meta.get('artist', [])
             if isinstance(artists, str): artists = [artists]
             
-            return (artists, meta.get('title', title), meta.get('album', ''), meta.get('year', ''))
+            parsed_title = meta.get('title', title)
+            parsed_album = meta.get('album', '')
+            parsed_year = meta.get('year', '')
+            
+            # FORCE: If album is generic or empty, use the Song Title
+            if not parsed_album or parsed_album.lower() in ['single', 'unknown', 'none', 'unknown album']:
+                parsed_album = parsed_title
+            
+            return (artists, parsed_title, parsed_album, parsed_year)
             
         except Exception as e:
             print(f"OpenAI Error: {e}")
