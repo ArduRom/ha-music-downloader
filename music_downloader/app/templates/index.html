@@ -259,6 +259,7 @@
                 }
             } catch (e) {
                 status.innerText = "Error: " + e;
+                status.className = "error";
             } finally {
                 btn.disabled = false;
                 btn.innerText = "Confirm & Download";
