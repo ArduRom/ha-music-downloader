@@ -43,21 +43,46 @@ class MusicDownloader:
             with yt_dlp.YoutubeDL(search_opts) as ydl:
                 print(f"Searching for: {query}")
                 result = ydl.extract_info(query, download=False)
-                if 'entries' in result and len(result['entries']) > 0:
-                    video = result['entries'][0]
-                    return {
-                        'found': True,
-                        'title': video.get('title'),
-                        'uploader': video.get('uploader'),
-                        'id': video.get('id'),
-                        'url': video.get('webpage_url') or video.get('url'),
-                        'thumbnail': video.get('thumbnail')
-                    }
+                
+                # Handling different result types
+                # Sometimes result is a dict with 'entries', sometimes directly a dict?
+                
+                if isinstance(result, dict):
+                    # Check for 'entries' (playlist/search result list)
+                    if 'entries' in result:
+                        entries = result['entries']
+                        if entries and len(entries) > 0:
+                            video = entries[0]
+                            return self._format_video_result(video)
+                        else:
+                            return {'found': False, 'message': 'No entries found in search result.'}
+                    
+                    # If no entries, maybe it IS the video info directly?
+                    elif 'title' in result and 'uploader' in result:
+                         return self._format_video_result(result)
+                    
+                    else:
+                        return {'found': False, 'message': f'Unknown result structure: {list(result.keys())}'}
                 else:
-                    return {'found': False}
+                    return {'found': False, 'message': f'Unexpected result type: {type(result)}'}
+
         except Exception as e:
             print(f"Search Error: {e}")
             return {'found': False, 'error': str(e)}
+
+    def _format_video_result(self, video):
+        # Helper to safely extract dict values
+        if not isinstance(video, dict):
+             return {'found': False, 'message': 'Video entry is not a dict'}
+             
+        return {
+            'found': True,
+            'title': video.get('title'),
+            'uploader': video.get('uploader'),
+            'id': video.get('id'),
+            'url': video.get('webpage_url') or video.get('url'),
+            'thumbnail': video.get('thumbnail')
+        }
 
     def clean_metadata(self, channel, title):
         """
@@ -125,16 +150,7 @@ class MusicDownloader:
                 # SMART METADATA PARSING (Returns list of artists)
                 artists_list, title = self.clean_metadata(raw_channel, raw_title)
                 
-                # For filename, use Main Artist only or "Main feat. All"
-                # To keep it Spotify-like, filename is usually just "Artist - Title.mp3"
-                # But tags contain the magic.
-                
                 main_artist_str = artists_list[0]
-                # Join for Filename (safe string)
-                if len(artists_list) > 1:
-                    # Optional: "Eminem feat. Rihanna - Love..." for filename
-                    # But user wanted strict filtering in App, which relies on TAGS.
-                    pass 
                 
                 genre = "Unknown"
                 if info.get('categories'):
@@ -153,6 +169,8 @@ class MusicDownloader:
                     self._tag_file(final_path, artists_list, title, genre)
                     return True, f"Saved: {main_artist_str} - {title}"
                 else:
+                    # Fallback check if simple path failed (maybe extension was .m4a before conversion)
+                    # Try to find file starting with pattern?
                     return True, f"Downloaded logic finished."
 
         except Exception as e:
@@ -166,9 +184,6 @@ class MusicDownloader:
             except ID3NoHeaderError:
                 tags = EasyID3()
             
-            # Mutagen EasyID3 handles lists correctly for 'artist' frame
-            # This creates multiple TPE1 frames or null-separated strings depending on version.
-            # Most modern players (and Spotify import) read this as multiple artists.
             tags['artist'] = artists_list
             tags['title'] = title
             tags['genre'] = genre
