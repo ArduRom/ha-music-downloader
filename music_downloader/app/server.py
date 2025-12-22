@@ -43,6 +43,20 @@ def download():
     else:
         return jsonify({"success": False, "message": message}), 500
 
+@app.errorhandler(Exception)
+def handle_exception(e):
+    # Pass through HTTP errors
+    if isinstance(e, HTTPException):
+        return ignored
+    # Return JSON for non-HTTP errors
+    print(f"SERVER ERROR: {e}")
+    import traceback
+    traceback.print_exc()
+    return jsonify({"success": False, "message": str(e), "error": "Internal Server Error"}), 500
+
+from werkzeug.exceptions import HTTPException
+
 if __name__ == '__main__':
     print(f"Starting server on 0.0.0.0:8099. Download Dir: {config.DOWNLOAD_DIR}")
-    app.run(host='0.0.0.0', port=8099, debug=False)
+    # Fix: Set threaded=True for better responsiveness
+    app.run(host='0.0.0.0', port=8099, debug=False, threaded=True)
