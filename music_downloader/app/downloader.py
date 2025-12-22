@@ -113,41 +113,63 @@ class MusicDownloader:
             if not os.path.exists(config.DOWNLOAD_DIR):
                 os.makedirs(config.DOWNLOAD_DIR, exist_ok=True)
             
-            with yt_dlp.YoutubeDL(self.ydl_opts) as ydl:
+            # Phase 1: Get Metadata
+            # Use a separate instance for info extraction to avoid state pollution
+            ydl_opts_info = {
+                'quiet': True, 
+                'skip_download': True,
+                'format': 'bestaudio/best',
+            }
+            
+            artist = "Unknown"
+            title = "Unknown"
+            genre = "Unknown"
+            
+            with yt_dlp.YoutubeDL(ydl_opts_info) as ydl:
+                print(f"Fetching metadata for {url}...")
                 info = ydl.extract_info(url, download=False)
                 
+                if not isinstance(info, dict):
+                     # If yt-dlp returns a string (error) or list, handle it
+                     print(f"Error: extract_info returned {type(info)}: {info}")
+                     return False, f"Metadata extraction failed: {info}"
+
                 raw_channel = info.get('uploader', 'Unknown Artist')
                 raw_title = info.get('title', 'Unknown Title')
                 
                 # SMART METADATA PARSING
                 artist, title = self.clean_metadata(raw_channel, raw_title)
                 
-                # Check for Genre (YouTube Categories)
-                genre = "Unknown"
-                if info.get('categories'):
-                    genre = info['categories'][0] # e.g. "Music" - not great, but something.
+                if info.get('categories') and isinstance(info['categories'], list) and len(info['categories']) > 0:
+                    genre = info['categories'][0]
                 
                 print(f"Metadata Plan -> Artist: '{artist}', Title: '{title}', Genre: '{genre}'")
                 
-                # Set filename to "Artist - Title.mp3"
-                final_filename = f"{artist} - {title}.mp3".replace("/", "_").replace("\\", "_")
-                self.ydl_opts['outtmpl'] = os.path.join(config.DOWNLOAD_DIR, f"{artist} - {title}.%(ext)s")
+            # Phase 2: Download with SPECIFIC filename
+            # We create a FRESH options dict and instance
+            final_filename = f"{artist} - {title}.mp3".replace("/", "_").replace("\\", "_")
+            
+            # Copy base options and enforce specific filename
+            dl_opts = self.ydl_opts.copy()
+            dl_opts['outtmpl'] = os.path.join(config.DOWNLOAD_DIR, f"{artist} - {title}.%(ext)s")
+            
+            print(f"Starting Download -> {final_filename}")
+            
+            with yt_dlp.YoutubeDL(dl_opts) as ydl_dl:
+                ydl_dl.download([url])
                 
-                # DOWNLOAD
-                ydl.download([url])
+            final_path = os.path.join(config.DOWNLOAD_DIR, final_filename)
                 
-                # PATH CALCULATION
-                final_path = os.path.join(config.DOWNLOAD_DIR, final_filename)
-                
-                # STRICT TAGGING (Mutagen)
-                if os.path.exists(final_path):
-                    self._tag_file(final_path, artist, title, genre)
-                    return True, f"Saved & Tagged: {artist} - {title}"
-                else:
-                    return True, f"Downloaded, but check filename: {artist} - {title}"
+            if os.path.exists(final_path):
+                self._tag_file(final_path, artist, title, genre)
+                return True, f"Saved & Tagged: {artist} - {title}"
+            else:
+                return True, f"Downloaded, check folder (Filename might differ slightly): {artist} - {title}"
 
         except Exception as e:
             print(f"Error: {e}")
+            import traceback
+            traceback.print_exc()
             return False, str(e)
 
     def _tag_file(self, filepath, artist, title, genre):
