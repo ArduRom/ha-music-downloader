@@ -43,17 +43,34 @@ class MusicDownloader:
             with yt_dlp.YoutubeDL(search_opts) as ydl:
                 print(f"Searching for: {query}")
                 result = ydl.extract_info(query, download=False)
-                if 'entries' in result and len(result['entries']) > 0:
-                    video = result['entries'][0]
-                    return {
+                # Fixing TypeError: Check correct response structure
+                if isinstance(result, dict) and 'entries' in result:
+                    search_results = result['entries']
+                    if search_results and len(search_results) > 0:
+                        video = search_results[0]
+                        return {
+                            'found': True,
+                            'title': video.get('title'),
+                            'uploader': video.get('uploader'),
+                            'id': video.get('id'),
+                            'url': video.get('webpage_url') or video.get('url'),
+                            'thumbnail': video.get('thumbnail')
+                        }
+                    else:
+                        print("DEBUG: Entries list was empty")
+                        return {'found': False, 'message': 'No entries found.'}
+                elif isinstance(result, dict) and 'title' in result:
+                    # Direct video result fallback
+                     return {
                         'found': True,
-                        'title': video.get('title'),
-                        'uploader': video.get('uploader'),
-                        'id': video.get('id'),
-                        'url': video.get('webpage_url') or video.get('url'),
-                        'thumbnail': video.get('thumbnail')
+                        'title': result.get('title'),
+                        'uploader': result.get('uploader'),
+                        'id': result.get('id'),
+                        'url': result.get('webpage_url') or result.get('url'),
+                        'thumbnail': result.get('thumbnail')
                     }
                 else:
+                    print(f"DEBUG: Unknown result type: {type(result)} - {result}")
                     return {'found': False}
         except Exception as e:
             print(f"Search Error: {e}")
