@@ -1,6 +1,6 @@
 #!/usr/bin/with-contenv bashio
 
-echo "Starting Music Downloader Add-on (v1.1.2)..."
+echo "Starting Music Downloader Add-on (v1.1.3)..."
 
 DOWNLOAD_PATH=$(bashio::config 'download_dir')
 echo "Download directory configured as: $DOWNLOAD_PATH"
