@@ -27,7 +27,6 @@
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
             width: 100%;
             max-width: 450px;
-            /* Slightly wider for editor */
             text-align: center;
         }
 
@@ -58,7 +57,6 @@
 
         .edit-input {
             margin-bottom: 0.8rem !important;
-            /* Tighter spacing in editor */
             background-color: #2C2E33 !important;
         }
 
@@ -89,7 +87,6 @@
             margin-top: 1.5rem;
             padding: 1rem;
             background: #1a1b1e;
-            /* Darker to distinguish card */
             border-radius: 8px;
             border: 1px solid #373a40;
             display: none;
@@ -167,7 +164,7 @@
             if (!query) return;
 
             searchBtn.disabled = true;
-            status.innerText = "Searching YouTube...";
+            status.innerText = "Searching YouTube (+ OpenAI)...";
             status.className = "";
             document.getElementById('resultCard').style.display = 'none';
 
@@ -202,6 +199,8 @@
 
             // Pre-fill fields with Proposed Metadata
             document.getElementById('editTitle').value = result.proposal_title;
+            document.getElementById('editAlbum').value = result.proposal_album || "";
+            document.getElementById('editYear').value = result.proposal_year || "";
 
             // Join artists list to string for editing: "A, B, C"
             let artistsStr = "";
@@ -234,6 +233,8 @@
             // Read values from Editor
             const manualTitle = document.getElementById('editTitle').value.trim();
             const artistsRaw = document.getElementById('editArtists').value;
+            const manualAlbum = document.getElementById('editAlbum').value.trim();
+            const manualYear = document.getElementById('editYear').value.trim();
 
             // Convert artists string back to list. Split by comma.
             const manualArtists = artistsRaw.split(',').map(s => s.trim()).filter(s => s.length > 0);
@@ -249,7 +250,9 @@
                     body: JSON.stringify({
                         url: currentUrl,
                         title: manualTitle,
-                        artists: manualArtists
+                        artists: manualArtists,
+                        album: manualAlbum,
+                        year: manualYear
                     }),
                     headers: { 'Content-Type': 'application/json' }
                 });
