@@ -4,14 +4,13 @@ from mutagen.easyid3 import EasyID3
 from mutagen.id3 import ID3, ID3NoHeaderError
 import config
 import re
-import traceback
-import copy
 
 class MusicDownloader:
     def __init__(self):
-        # Base options
-        self.base_opts = {
+        self.ydl_opts = {
             'format': 'bestaudio/best',
+            # We will set outtmpl dynamically per track to match our strict naming
+            'outtmpl': os.path.join(config.DOWNLOAD_DIR, '%(title)s.%(ext)s'), 
             'postprocessors': [
                 {
                     'key': 'FFmpegExtractAudio',
@@ -19,7 +18,7 @@ class MusicDownloader:
                     'preferredquality': '320',
                 },
                 {
-                    'key': 'EmbedThumbnail', 
+                    'key': 'EmbedThumbnail', # This ensures the Cover Art is in the file
                 },
                 {
                     'key': 'FFmpegMetadata', 
@@ -32,7 +31,7 @@ class MusicDownloader:
         }
         
         if hasattr(config, 'BIN_DIR') and config.BIN_DIR and os.path.exists(config.BIN_DIR):
-             self.base_opts['ffmpeg_location'] = config.BIN_DIR
+             self.ydl_opts['ffmpeg_location'] = config.BIN_DIR
 
     def search_video(self, query):
         search_opts = {
@@ -44,139 +43,108 @@ class MusicDownloader:
             with yt_dlp.YoutubeDL(search_opts) as ydl:
                 print(f"Searching for: {query}")
                 result = ydl.extract_info(query, download=False)
-                
-                # Robust Result Handling (The Fix for TypeError)
-                if isinstance(result, dict):
-                    if 'entries' in result:
-                        entries = result['entries']
-                        if entries and len(entries) > 0:
-                            return self._format_video_result(entries[0])
-                        else:
-                            return {'found': False, 'message': 'No entries found in search result.'}
-                    elif 'title' in result and 'uploader' in result:
-                         return self._format_video_result(result)
-                    else:
-                        return {'found': False, 'message': f'Unknown result structure: {list(result.keys())}'}
+                if 'entries' in result and len(result['entries']) > 0:
+                    video = result['entries'][0]
+                    return {
+                        'found': True,
+                        'title': video.get('title'),
+                        'uploader': video.get('uploader'),
+                        'id': video.get('id'),
+                        'url': video.get('webpage_url') or video.get('url'),
+                        'thumbnail': video.get('thumbnail')
+                    }
                 else:
-                    return {'found': False, 'message': f'Unexpected result type: {type(result)}'}
-
+                    return {'found': False}
         except Exception as e:
             print(f"Search Error: {e}")
-            traceback.print_exc()
             return {'found': False, 'error': str(e)}
 
-    def _format_video_result(self, video):
-        if not isinstance(video, dict):
-             return {'found': False, 'message': 'Video entry is not a dict'}
-             
-        return {
-            'found': True,
-            'title': video.get('title'),
-            'uploader': video.get('uploader'),
-            'id': video.get('id'),
-            'url': video.get('webpage_url') or video.get('url'),
-            'thumbnail': video.get('thumbnail')
-        }
-
     def clean_metadata(self, channel, title):
-        main_artist = channel
+        """
+        Smart parsing to separate Artist and Title correctly.
+        Common formats: 
+        1. "Artist - Title" (in Title)
+        2. "Artist - Title (Official Video)"
+        """
+        artist = channel
         song_title = title
-        featured_artists = []
-
+        
+        # 1. Clean up "VEVO" or "Official" from channel name if needed, 
+        # but usually "Artist - Title" in the video title is the most accurate source.
+        
+        # Check if " - " is in the title (Separator)
         if " - " in title:
             parts = title.split(" - ", 1)
-            main_artist = parts[0].strip()
+            artist = parts[0].strip()
             song_title = parts[1].strip()
-
-        feat_pattern = r"(?i)(?:feat\.?|ft\.?|featuring)\s+(.+?)(?=\)|\]|$)"
-        matches = re.findall(feat_pattern, song_title)
-        for match in matches:
-            feat = match.strip()
-            if feat.endswith(')'): feat = feat[:-1]
-            if feat.endswith(']'): feat = feat[:-1]
-            sub_feats = re.split(r",|&", feat)
-            for sub in sub_feats:
-                sub = sub.strip()
-                if sub and sub not in featured_artists:
-                    featured_artists.append(sub)
-
+        
+        # Clean junk from Title (e.g. " (Official Video)", " [Lyrics]")
+        # Regex to remove brackets with common keywords or just all brackets at the end
         junk_patterns = [
             r"\(Official Video\)", r"\(Official Audio\)", r"\(Lyrics\)", 
-            r"\[Official Video\]", r"\[Audio\]", 
-            r"(?i)[\(\[]?(?:feat\.?|ft\.?|featuring)\s+.+?[\)\]]?" 
+            r"\[Official Video\]", r"\[Audio\]", r"ft\..*", r"feat\..*"
         ]
         
         for pattern in junk_patterns:
             song_title = re.sub(pattern, "", song_title, flags=re.IGNORECASE).strip()
             
-        all_artists = [main_artist] + featured_artists
-        return all_artists, song_title
+        # Also clean artist if it came from the split
+        return artist, song_title
 
     def download_track(self, url):
         try:
             if not os.path.exists(config.DOWNLOAD_DIR):
                 os.makedirs(config.DOWNLOAD_DIR, exist_ok=True)
             
-            # Phase 1: Info Only (Safer logic)
-            info_opts = {'quiet': True, 'skip_download': True}
-            
-            artists_list = []
-            title = "Unknown"
-            genre = "Unknown"
-            
-            with yt_dlp.YoutubeDL(info_opts) as ydl_info:
-                print(f"Fetching metadata for {url}...")
-                info = ydl_info.extract_info(url, download=False)
+            with yt_dlp.YoutubeDL(self.ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
                 
                 raw_channel = info.get('uploader', 'Unknown Artist')
                 raw_title = info.get('title', 'Unknown Title')
-                if info.get('categories'):
-                    genre = info['categories'][0]
-
-                artists_list, title = self.clean_metadata(raw_channel, raw_title)
-                print(f"Metadata -> Artists: {artists_list}, Title: '{title}'")
-
-            # Phase 2: Download with specific filename
-            main_artist_str = artists_list[0]
-            # Sanitize for filesystem
-            safe_artist = main_artist_str.replace("/", "_").replace("\\", "_").replace(":", "-")
-            safe_title = title.replace("/", "_").replace("\\", "_").replace(":", "-")
-            
-            final_filename = f"{safe_artist} - {safe_title}.mp3"
-            final_path = os.path.join(config.DOWNLOAD_DIR, final_filename)
-            
-            dl_opts = copy.deepcopy(self.base_opts)
-            dl_opts['outtmpl'] = os.path.join(config.DOWNLOAD_DIR, f"{safe_artist} - {safe_title}.%(ext)s")
-            
-            print(f"Starting Download -> {final_path}")
-            
-            with yt_dlp.YoutubeDL(dl_opts) as ydl_download:
-                ydl_download.download([url])
                 
-            if os.path.exists(final_path):
-                self._tag_file(final_path, artists_list, title, genre)
-                return True, f"Saved: {safe_artist} - {safe_title}"
-            else:
-                return True, "Downloaded logic finished (check folder for file)."
+                # SMART METADATA PARSING
+                artist, title = self.clean_metadata(raw_channel, raw_title)
+                
+                # Check for Genre (YouTube Categories)
+                genre = "Unknown"
+                if info.get('categories'):
+                    genre = info['categories'][0] # e.g. "Music" - not great, but something.
+                
+                print(f"Metadata Plan -> Artist: '{artist}', Title: '{title}', Genre: '{genre}'")
+                
+                # Set filename to "Artist - Title.mp3"
+                final_filename = f"{artist} - {title}.mp3".replace("/", "_").replace("\\", "_")
+                self.ydl_opts['outtmpl'] = os.path.join(config.DOWNLOAD_DIR, f"{artist} - {title}.%(ext)s")
+                
+                # DOWNLOAD
+                ydl.download([url])
+                
+                # PATH CALCULATION
+                final_path = os.path.join(config.DOWNLOAD_DIR, final_filename)
+                
+                # STRICT TAGGING (Mutagen)
+                if os.path.exists(final_path):
+                    self._tag_file(final_path, artist, title, genre)
+                    return True, f"Saved & Tagged: {artist} - {title}"
+                else:
+                    return True, f"Downloaded, but check filename: {artist} - {title}"
 
         except Exception as e:
-            print(f"Download Error: {e}")
-            traceback.print_exc()
+            print(f"Error: {e}")
             return False, str(e)
 
-    def _tag_file(self, filepath, artists_list, title, genre):
+    def _tag_file(self, filepath, artist, title, genre):
         try:
             try:
                 tags = EasyID3(filepath)
             except ID3NoHeaderError:
                 tags = EasyID3()
             
-            tags['artist'] = artists_list
+            tags['artist'] = artist
             tags['title'] = title
             tags['genre'] = genre
             tags.save(filepath)
-            print(f"Tags updated successfully on {os.path.basename(filepath)}")
+            print(f"Tags updated: Artist='{artist}', Title='{title}'")
             
         except Exception as e:
             print(f"Tagging Error: {e}")
-            traceback.print_exc()
