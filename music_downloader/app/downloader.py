@@ -27,7 +27,14 @@ class MusicDownloader:
             ],
             'quiet': True,
             'no_warnings': True,
-            'overwrites': True, 
+            'overwrites': True,
+            # Fix 403 Forbidden: Force IPv4 and use Android client
+            'source_address': '0.0.0.0', 
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['android', 'web'],
+                }
+            }, 
         }
         
         if hasattr(config, 'BIN_DIR') and config.BIN_DIR and os.path.exists(config.BIN_DIR):
