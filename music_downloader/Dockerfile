@@ -1,7 +1,7 @@
 FROM python:3.9-alpine
 
 # Install system dependencies
-RUN apk add --no-cache ffmpeg git dos2unix
+RUN apk add --no-cache ffmpeg git dos2unix build-base python3-dev
 
 WORKDIR /app
 
