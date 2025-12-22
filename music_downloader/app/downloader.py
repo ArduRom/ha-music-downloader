@@ -121,53 +121,60 @@ class MusicDownloader:
     def search_video(self, query):
         search_opts = {
             'quiet': True,
-            'default_search': 'ytsearch1', 
+            'default_search': 'ytsearch15', # Request 15 results
             'skip_download': True,
+            'ignoreerrors': True,
+            'extract_flat': True, # Faster, returns minimal info for list
         }
         try:
             with yt_dlp.YoutubeDL(search_opts) as ydl:
                 print(f"Searching for: {query}")
                 result = ydl.extract_info(query, download=False)
                 
-                video_data = None
-                if isinstance(result, dict) and 'entries' in result and len(result['entries']) > 0:
-                    video_data = result['entries'][0]
-                elif isinstance(result, dict) and 'title' in result:
-                    video_data = result
+                results_list = []
                 
-                if video_data:
-                    # PROPOSE METADATA
-                    # Try AI first
-                    ai_proposal = self._get_ai_metadata(video_data.get('title'), video_data.get('uploader'))
-                    
-                    if ai_proposal:
-                        artists, title, album, year = ai_proposal
-                        print("Using AI Metadata Proposal.")
-                    else:
-                        print("Using Regex Metadata Proposal.")
-                        artists, title = self.clean_metadata(video_data.get('uploader'), video_data.get('title'))
-                        album = ""
-                        year = ""
-                    
-                    return {
-                        'found': True,
-                        'title': video_data.get('title'), 
-                        'uploader': video_data.get('uploader'),
-                        'id': video_data.get('id'),
-                        'url': video_data.get('webpage_url') or video_data.get('url'),
-                        'thumbnail': video_data.get('thumbnail'),
-                        'proposal_artists': artists,
-                        'proposal_title': title,
-                        'proposal_album': album,
-                        'proposal_year': year
-                    }
-                else:
-                    return {'found': False, 'message': 'No entries found.'}
+                if 'entries' in result:
+                    for entry in result['entries']:
+                        if not entry: continue
+                        # Filter out obviously bad results if needed (e.g., extremely long/short)
+                        results_list.append({
+                            'id': entry.get('id'),
+                            'title': entry.get('title'),
+                            'uploader': entry.get('uploader'),
+                            'url': entry.get('url') or entry.get('webpage_url'),
+                            'duration': entry.get('duration'),
+                            # 'thumbnail': entry.get('thumbnail') # flat extraction might not have good thumbnails
+                        })
+                
+                return {'found': True, 'results': results_list}
 
         except Exception as e:
             print(f"Search Error: {e}")
             traceback.print_exc()
             return {'found': False, 'error': str(e)}
+
+    def analyze_metadata(self, title, channel):
+        """
+        Generates metadata proposal for the selected video.
+        """
+        # Try AI first
+        ai_proposal = self._get_ai_metadata(title, channel)
+        
+        if ai_proposal:
+            artists, final_title, album, year = ai_proposal
+            print("Using AI Metadata Proposal.")
+        else:
+            print("Using Regex Metadata Proposal.")
+            artists, final_title = self.clean_metadata(channel, title)
+            album = ""
+            year = ""
+        
+        return {
+            'proposal_artists': artists,
+            'proposal_title': final_title,
+            'proposal_album': album,
+            'proposal_year': year
+        }
 
     def clean_metadata(self, channel, title):
         """

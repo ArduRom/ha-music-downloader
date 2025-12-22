@@ -6,281 +6,427 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Music Downloader</title>
     <style>
+        :root {
+            --primary: #4A90E2;
+            --bg: #121212;
+            --surface: #1E1E1E;
+            --text: #E0E0E0;
+            --text-secondary: #A0A0A0;
+            --accent: #BB86FC;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-            background-color: #1a1b1e;
-            color: #ffffff;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
             margin: 0;
             padding: 20px;
-            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
         }
 
         .container {
-            background-color: #25262b;
-            padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
             width: 100%;
-            max-width: 450px;
-            text-align: center;
+            max-width: 600px;
         }
 
         h1 {
-            margin-bottom: 1.5rem;
-            font-size: 1.5rem;
+            text-align: center;
+            font-weight: 300;
+            margin-bottom: 30px;
+            color: var(--accent);
+        }
+
+        /* Search Box */
+        .search-box {
+            background-color: var(--surface);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
         }
 
         input[type="text"] {
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 1rem;
-            border-radius: 8px;
-            border: 1px solid #373a40;
-            background-color: #1a1b1e;
+            flex-grow: 1;
+            background: #2C2C2C;
+            border: 1px solid #333;
             color: white;
-            box-sizing: border-box;
-            font-size: 1rem;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
         }
 
-        label {
-            display: block;
-            text-align: left;
-            margin-bottom: 0.3rem;
-            color: #aaa;
-            font-size: 0.9rem;
-        }
-
-        .edit-input {
-            margin-bottom: 0.8rem !important;
-            background-color: #2C2E33 !important;
+        input[type="text"]:focus {
+            border-color: var(--primary);
         }
 
         button {
-            width: 100%;
-            padding: 12px;
-            border-radius: 8px;
-            border: none;
-            background-color: #228be6;
+            background-color: var(--primary);
             color: white;
-            font-weight: bold;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
             cursor: pointer;
-            font-size: 1rem;
-            transition: background-color 0.2s;
-            margin-top: 0.5rem;
+            transition: background 0.2s;
         }
 
         button:hover {
-            background-color: #1c7ed6;
+            background-color: #357ABD;
         }
 
         button:disabled {
-            background-color: #373a40;
+            background-color: #555;
             cursor: not-allowed;
+            opacity: 0.7;
         }
 
-        #resultCard {
-            margin-top: 1.5rem;
-            padding: 1rem;
-            background: #1a1b1e;
+        /* Results List */
+        #results-area {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .result-item {
+            background-color: var(--surface);
+            padding: 15px;
             border-radius: 8px;
-            border: 1px solid #373a40;
-            display: none;
-            text-align: left;
+            border: 1px solid #333;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
+            display: flex;
+            flex-direction: column;
         }
 
-        #resultCard img {
-            width: 100%;
-            border-radius: 4px;
-            margin-bottom: 1rem;
+        .result-item:hover {
+            background-color: #252525;
+            transform: translateY(-2px);
         }
 
+        .result-title {
+            font-weight: 600;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+            color: var(--text);
+        }
+
+        .result-channel {
+            font-size: 0.9em;
+            color: var(--text-secondary);
+        }
+
+        /* Status & Loading */
         #status {
-            margin-top: 1rem;
-            font-size: 0.9rem;
-            min-height: 1.2em;
-        }
-
-        .success {
-            color: #40c057;
+            text-align: center;
+            margin: 20px 0;
+            min-height: 20px;
+            color: var(--text-secondary);
         }
 
         .error {
-            color: #fa5252;
+            color: #CF6679 !important;
+        }
+
+        /* Loader */
+        .loader {
+            border: 3px solid #333;
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Editor Modal */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            padding: 20px;
+        }
+
+        .editor {
+            background: var(--surface);
+            padding: 30px;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .editor h2 {
+            margin-top: 0;
+            font-size: 1.4em;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+            color: var(--text-secondary);
+        }
+
+        .form-group input {
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .editor-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 25px;
+        }
+
+        .btn-cancel {
+            background-color: #333;
+        }
+
+        .btn-cancel:hover {
+            background-color: #444;
         }
     </style>
 </head>
 
 <body>
+
     <div class="container">
         <h1>Music Downloader</h1>
 
-        <!-- Search Section -->
-        <div id="searchSection">
-            <input type="text" id="searchInput" placeholder="Search (e.g. 'Artist - Song')..."
-                onkeypress="handleEnter(event)">
-            <button id="searchBtn" onclick="searchMusic()">Search Music</button>
+        <div class="search-box">
+            <input type="text" id="query" placeholder="Search (e.g. Artist or Song)..." onkeypress="handleEnter(event)">
+            <button onclick="searchMusic()" id="btn-search">Search</button>
         </div>
 
-        <!-- Editor/Result Section -->
-        <div id="resultCard">
-            <img id="coverPreview" src="" alt="Cover">
-
-            <label>Title</label>
-            <input type="text" id="editTitle" class="edit-input">
-
-            <label>Artists (comma separated)</label>
-            <input type="text" id="editArtists" class="edit-input">
-
-            <label>Album</label>
-            <input type="text" id="editAlbum" class="edit-input" placeholder="Unknown">
-
-            <label>Year</label>
-            <input type="text" id="editYear" class="edit-input" placeholder="Optional">
-
-            <button id="downloadBtn" onclick="downloadMusic()">Confirm & Download</button>
-            <button onclick="resetSearch()" style="background-color: #373a40; margin-top: 0.5rem;">Cancel</button>
-        </div>
-
+        <div id="loader" class="loader"></div>
         <div id="status"></div>
+
+        <div id="results-area"></div>
+    </div>
+
+    <!-- Metadata Editor Modal -->
+    <div class="overlay" id="editor-overlay">
+        <div class="editor">
+            <h2>Edit Metadata</h2>
+            <div id="editor-loading" style="text-align:center; padding: 20px; display:none;">
+                <div class="loader" style="display:block; margin-bottom:10px;"></div>
+                <span>Analyzing with AI...</span>
+            </div>
+
+            <div id="editor-form">
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" id="meta-title">
+                </div>
+                <div class="form-group">
+                    <label>Artists (Comma separated)</label>
+                    <input type="text" id="meta-artists">
+                </div>
+                <div class="form-group">
+                    <label>Album</label>
+                    <input type="text" id="meta-album">
+                </div>
+                <div class="form-group">
+                    <label>Year</label>
+                    <input type="text" id="meta-year">
+                </div>
+
+                <div class="editor-actions">
+                    <button class="btn-cancel" onclick="closeEditor()">Cancel</button>
+                    <button onclick="confirmDownload()" id="btn-download">Download MP3</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
-        let currentUrl = null;
+        let currentVideoUrl = "";
 
         function handleEnter(e) {
             if (e.key === 'Enter') searchMusic();
         }
 
         async function searchMusic() {
-            const query = document.getElementById('searchInput').value.trim();
-            const status = document.getElementById('status');
-            const searchBtn = document.getElementById('searchBtn');
-
+            const query = document.getElementById('query').value;
             if (!query) return;
 
-            searchBtn.disabled = true;
-            status.innerText = "Searching YouTube (+ OpenAI)...";
-            status.className = "";
-            document.getElementById('resultCard').style.display = 'none';
-
-            try {
-                const response = await fetch('search', {
-                    method: 'POST', body: JSON.stringify({ query: query }),
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                const data = await response.json();
-
-                if (data.success && data.result) {
-                    showEditor(data.result);
-                    status.innerText = "";
-                } else {
-                    status.innerText = data.message || "No results found.";
-                    status.className = "error";
-                }
-            } catch (e) {
-                status.innerText = "Error: " + e;
-                status.className = "error";
-            } finally {
-                searchBtn.disabled = false;
-            }
-        }
-
-        function showEditor(result) {
-            currentUrl = result.url;
-
-            // Set Cover
-            const thumb = result.thumbnail || 'https://via.placeholder.com/320x180?text=No+Thumbnail';
-            document.getElementById('coverPreview').src = thumb;
-
-            // Pre-fill fields with Proposed Metadata
-            document.getElementById('editTitle').value = result.proposal_title;
-            document.getElementById('editAlbum').value = result.proposal_album || "";
-            document.getElementById('editYear').value = result.proposal_year || "";
-
-            // Join artists list to string for editing: "A, B, C"
-            let artistsStr = "";
-            if (Array.isArray(result.proposal_artists)) {
-                artistsStr = result.proposal_artists.join(", ");
-            } else {
-                artistsStr = result.proposal_artists; // Fallback should be list though
-            }
-            document.getElementById('editArtists').value = artistsStr;
-
-            // Show UI
-            document.getElementById('searchSection').style.display = 'none';
-            document.getElementById('resultCard').style.display = 'block';
-        }
-
-        function resetSearch() {
-            document.getElementById('resultCard').style.display = 'none';
-            document.getElementById('searchSection').style.display = 'block';
-            document.getElementById('status').innerText = "";
-            document.getElementById('searchInput').value = "";
-            currentUrl = null;
-        }
-
-        async function downloadMusic() {
-            if (!currentUrl) return;
-
-            const btn = document.getElementById('downloadBtn');
+            const btn = document.getElementById('btn-search');
             const status = document.getElementById('status');
+            const loader = document.getElementById('loader');
+            const resultsArea = document.getElementById('results-area');
 
-            // Read values from Editor
-            const manualTitle = document.getElementById('editTitle').value.trim();
-            const artistsRaw = document.getElementById('editArtists').value;
-            const manualAlbum = document.getElementById('editAlbum').value.trim();
-            const manualYear = document.getElementById('editYear').value.trim();
-
-            // Convert artists string back to list. Split by comma.
-            const manualArtists = artistsRaw.split(',').map(s => s.trim()).filter(s => s.length > 0);
-
+            status.innerText = "";
+            resultsArea.innerHTML = "";
             btn.disabled = true;
-            btn.innerText = "Downloading...";
-            status.innerText = "Downloading... check HA /share folder soon.";
-            status.className = "";
+            loader.style.display = "block";
 
             try {
-                const response = await fetch('download', {
+                const response = await fetch('/search', {
                     method: 'POST',
-                    body: JSON.stringify({
-                        url: currentUrl,
-                        title: manualTitle,
-                        artists: manualArtists,
-                        album: manualAlbum,
-                        year: manualYear
-                    }),
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: query })
                 });
 
                 const text = await response.text();
                 let data;
                 try {
                     data = JSON.parse(text);
-                } catch (err) {
-                    console.error("Failed to parse JSON:", text);
-                    throw new Error("Server Error (Check Logs): " + text.substring(0, 100));
+                } catch (e) {
+                    throw new Error("Server Error (Check Logs): " + text.substring(0, 50));
                 }
 
-                if (response.ok && data.success) {
-                    status.innerText = data.message;
-                    status.className = "success";
-                    setTimeout(resetSearch, 3000);
+                if (data.results && data.results.length > 0) {
+                    renderResults(data.results);
+                } else if (data.found === false) { // Handle explicit "not found"
+                    status.innerText = "No results found.";
+                } else if (data.results && data.results.length === 0) {
+                    status.innerText = "No results found.";
                 } else {
-                    status.innerText = "Error: " + (data.message || "Unknown Error");
-                    status.className = "error";
+                    status.innerText = "Error: Invalid response format.";
                 }
-            } catch (e) {
-                status.innerText = "Error: " + e.message;
+
+            } catch (error) {
+                status.innerText = "Error: " + error.message;
                 status.className = "error";
             } finally {
                 btn.disabled = false;
-                btn.innerText = "Confirm & Download";
+                loader.style.display = "none";
             }
+        }
+
+        function renderResults(results) {
+            const container = document.getElementById('results-area');
+            container.innerHTML = "";
+
+            results.forEach(video => {
+                const div = document.createElement('div');
+                div.className = 'result-item';
+                div.onclick = () => selectVideo(video);
+
+                div.innerHTML = `
+                    <div class="result-title">${escapeHtml(video.title)}</div>
+                    <div class="result-channel">${escapeHtml(video.uploader)}</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        async function selectVideo(video) {
+            currentVideoUrl = video.url || "https://youtube.com/watch?v=" + video.id;
+
+            // Show Overlay
+            document.getElementById('editor-overlay').style.display = 'flex';
+            document.getElementById('editor-form').style.display = 'none';
+            document.getElementById('editor-loading').style.display = 'block';
+
+            // Call Analyze
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title: video.title,
+                        channel: video.uploader
+                    })
+                });
+                const data = await response.json();
+
+                if (data.success && data.result) {
+                    populateEditor(data.result);
+                } else {
+                    alert("Analysis Failed: " + (data.message || "Unknown error"));
+                    closeEditor();
+                }
+
+            } catch (e) {
+                alert("Analysis Error: " + e.message);
+                closeEditor();
+            }
+        }
+
+        function populateEditor(proposal) {
+            document.getElementById('editor-loading').style.display = 'none';
+            document.getElementById('editor-form').style.display = 'block';
+
+            document.getElementById('meta-title').value = proposal.proposal_title || "";
+            document.getElementById('meta-artists').value = (proposal.proposal_artists || []).join(", ");
+            document.getElementById('meta-album').value = proposal.proposal_album || "";
+            document.getElementById('meta-year').value = proposal.proposal_year || "";
+        }
+
+        function closeEditor() {
+            document.getElementById('editor-overlay').style.display = 'none';
+        }
+
+        async function confirmDownload() {
+            const btn = document.getElementById('btn-download');
+            btn.disabled = true;
+            btn.innerText = "Starting...";
+
+            const payload = {
+                url: currentVideoUrl,
+                title: document.getElementById('meta-title').value,
+                artists: document.getElementById('meta-artists').value.split(',').map(s => s.trim()).filter(s => s),
+                album: document.getElementById('meta-album').value,
+                year: document.getElementById('meta-year').value
+            };
+
+            try {
+                const response = await fetch('/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+
+                closeEditor();
+                alert(data.message); // "Download started..."
+
+            } catch (e) {
+                alert("Submit Error: " + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Download MP3";
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return "";
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
         }
     </script>
 </body>

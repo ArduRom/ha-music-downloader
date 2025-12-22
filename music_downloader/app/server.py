@@ -18,10 +18,20 @@ def search():
         return jsonify({"success": False, "message": "No query provided"}), 400
     
     result = loader.search_video(query)
-    if result.get('found'):
-        return jsonify({"success": True, "result": result})
-    else:
-        return jsonify({"success": False, "message": "No results found."})
+    # Return whatever search_video returns (now containing 'results' list)
+    return jsonify(result)
+
+@app.route('/analyze', methods=['POST'])
+def analyze():
+    data = request.json
+    title = data.get('title')
+    channel = data.get('channel')
+    
+    if not title:
+        return jsonify({"success": False, "message": "No title provided"}), 400
+        
+    proposal = loader.analyze_metadata(title, channel)
+    return jsonify({"success": True, "result": proposal})
 
 import threading
 
