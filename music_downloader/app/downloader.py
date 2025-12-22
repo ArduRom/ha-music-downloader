@@ -160,7 +160,70 @@ class MusicDownloader:
             traceback.print_exc()
             return {'found': False, 'error': str(e)}
 
-    # ... clean_metadata remains as fallback ...
+    def clean_metadata(self, channel, title):
+        """
+        Smart parsing to separate Artist and Title correctly.
+        Returns: (artists_list, song_title)
+        """
+        artist_str = channel
+        song_title = title
+        
+        # 1. Separator Check: "MainArtist - SongTitle"
+        if " - " in title:
+            parts = title.split(" - ", 1)
+            artist_str = parts[0].strip()
+            song_title = parts[1].strip()
+        
+        # 2. Extract featured artists from Title (e.g. "Song (feat. X)")
+        featured_artists = []
+        # Look for feat. patterns
+        feat_pattern = r"(?i)(?:feat\.?|ft\.?|featuring)\s+(.+?)(?=\)|\]|$)"
+        matches = re.findall(feat_pattern, song_title)
+        for match in matches:
+            # Clean match (remove trailing brackets if regex got greedy)
+            feat_name = match.strip()
+            if feat_name.endswith(')'): feat_name = feat_name[:-1]
+            if feat_name.endswith(']'): feat_name = feat_name[:-1]
+            featured_artists.append(feat_name)
+
+        # 3. Clean junk from Title
+        junk_patterns = [
+            r"\(Official Video\)", r"\(Official Audio\)", r"\(Lyrics\)", 
+            r"\[Official Video\]", r"\[Audio\]", 
+            r"(?i)[\(\[]?(?:feat\.?|ft\.?|featuring)\s+.+?[\)\]]?",
+            # Extra Cleaners
+            r"(?i)\[HD\]", r"(?i)\[HQ\]", r"(?i)\(HD\)", r"(?i)\(HQ\)",
+            r"(?i)\(Video\)", r"(?i)\[Video\]",
+            r"(?i)\(Official\)", r"(?i)\[Official\]",
+            r"(?i)4K", r"(?i)HD"
+        ]
+        for pattern in junk_patterns:
+            song_title = re.sub(pattern, "", song_title, flags=re.IGNORECASE).strip()
+
+        # 4. Split Artists String (e.g. "Martin Garrix, Macklemore & Patrick Stump")
+        # We split by comma (,) and Ampersand (&) and " x "
+        artist_str = re.sub(r"(?i)\s+x\s+", " & ", artist_str)
+        primary_artists = re.split(r",|&", artist_str)
+        
+        # Clean and collect final list
+        final_artists = []
+        for a in primary_artists:
+            a = a.strip()
+            if a and a not in final_artists:
+                final_artists.append(a)
+                
+        # Parse featured artists string too
+        for f in featured_artists:
+            subs = re.split(r",|&", f)
+            for s in subs:
+                s = s.strip()
+                if s and s not in final_artists:
+                    final_artists.append(s)
+
+        if not final_artists:
+            final_artists = ["Unknown Artist"]
+
+        return final_artists, song_title
 
     def download_track(self, url, manual_artists=None, manual_title=None, manual_album=None, manual_year=None):
         try:
