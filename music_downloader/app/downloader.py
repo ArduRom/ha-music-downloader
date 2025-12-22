@@ -106,7 +106,12 @@ class MusicDownloader:
         # Regex to remove brackets with common keywords or just all brackets at the end
         junk_patterns = [
             r"\(Official Video\)", r"\(Official Audio\)", r"\(Lyrics\)", 
-            r"\[Official Video\]", r"\[Audio\]", r"ft\..*", r"feat\..*"
+            r"\[Official Video\]", r"\[Audio\]", r"ft\..*", r"feat\..*",
+            # Extra Cleaners
+            r"(?i)\[HD\]", r"(?i)\[HQ\]", r"(?i)\(HD\)", r"(?i)\(HQ\)",
+            r"(?i)\(Video\)", r"(?i)\[Video\]",
+            r"(?i)\(Official\)", r"(?i)\[Official\]",
+            r"(?i)4K", r"(?i)HD"
         ]
         
         for pattern in junk_patterns:
