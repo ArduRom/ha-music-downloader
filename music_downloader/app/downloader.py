@@ -293,23 +293,42 @@ class MusicDownloader:
 
             # Phase 2: Download
             filename_artist_str = artists_list[0]
-            final_filename = f"{filename_artist_str} - {title}.mp3".replace("/", "_").replace("\\", "_")
+            
+            # Helper to sanitize for Windows filenames
+            def sanitize_name(name):
+                # Replace bad chars with _ or -
+                return name.replace("/", "_").replace("\\", "_").replace(":", "-").replace("*", "").replace("?", "").replace("\"", "'").replace("<", "").replace(">", "").replace("|", "").strip()
+
+            safe_artist = sanitize_name(filename_artist_str)
+            # Remove trailing dots manually (windows hates them at end of folders)
+            if safe_artist.endswith('.'): safe_artist = safe_artist[:-1]
+            if not safe_artist: safe_artist = "Unknown_Artist"
+            
+            safe_title = sanitize_name(title)
+            
+            # Construct final paths
+            artist_dir = os.path.join(config.DOWNLOAD_DIR, safe_artist)
+            if not os.path.exists(artist_dir):
+                os.makedirs(artist_dir, exist_ok=True)
+
+            final_filename = f"{safe_artist} - {safe_title}.mp3"
             
             dl_opts = copy.deepcopy(self.base_opts)
-            dl_opts['outtmpl'] = os.path.join(config.DOWNLOAD_DIR, f"{filename_artist_str} - {title}.%(ext)s")
+            # We explicitly set the path including the artist folder
+            dl_opts['outtmpl'] = os.path.join(artist_dir, f"{safe_artist} - {safe_title}.%(ext)s")
             
-            print(f"Starting Download -> {final_filename}")
+            print(f"Starting Download -> {final_filename} in {artist_dir}")
             
             with yt_dlp.YoutubeDL(dl_opts) as ydl_dl:
                 ydl_dl.download([url])
                 
-            final_path = os.path.join(config.DOWNLOAD_DIR, final_filename)
+            final_path = os.path.join(artist_dir, final_filename)
             
             if os.path.exists(final_path):
                 self._tag_file(final_path, artists_list, title, album, year, genre)
-                return True, f"Saved: {filename_artist_str} - {title}"
+                return True, f"Saved: {safe_artist}/{final_filename}"
             else:
-                return True, f"Downloaded (Check folder): {filename_artist_str} - {title}"
+                return True, f"Downloaded (Check folder): {safe_artist}/{final_filename}"
 
         except Exception as e:
             print(f"Download Error: {e}")
