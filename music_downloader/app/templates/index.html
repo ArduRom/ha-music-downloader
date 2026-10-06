@@ -1,433 +1,1358 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Music Downloader</title>
     <style>
         :root {
-            --primary: #4A90E2;
-            --bg: #121212;
-            --surface: #1E1E1E;
-            --text: #E0E0E0;
-            --text-secondary: #A0A0A0;
-            --accent: #BB86FC;
+            color-scheme: light;
+            --bg: #ffffff;
+            --bg-elev: #ffffff;
+            --surface: rgba(0, 0, 0, 0.05);
+            --surface-hover: rgba(0, 0, 0, 0.1);
+            --text: #0f0f0f;
+            --text-2: #606060;
+            --border: rgba(0, 0, 0, 0.1);
+            --input-bg: #ffffff;
+            --input-border: #c6c6c6;
+            --search-btn: #f8f8f8;
+            --brand: #ff0033;
+            --inverse-bg: #0f0f0f;
+            --inverse-fg: #ffffff;
+            --link: #065fd4;
+            --ok: #107c41;
+            --ok-soft: rgba(16, 124, 65, 0.12);
+            --warn: #a05a00;
+            --warn-soft: rgba(242, 166, 12, 0.18);
+            --bad: #cc0000;
+            --bad-soft: rgba(204, 0, 0, 0.1);
+            --shadow: 0 4px 32px rgba(0, 0, 0, 0.12);
+            --skeleton: rgba(0, 0, 0, 0.08);
         }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                color-scheme: dark;
+                --bg: #0f0f0f;
+                --bg-elev: #212121;
+                --surface: rgba(255, 255, 255, 0.1);
+                --surface-hover: rgba(255, 255, 255, 0.2);
+                --text: #f1f1f1;
+                --text-2: #aaaaaa;
+                --border: rgba(255, 255, 255, 0.12);
+                --input-bg: #121212;
+                --input-border: #303030;
+                --search-btn: #222222;
+                --inverse-bg: #f1f1f1;
+                --inverse-fg: #0f0f0f;
+                --link: #3ea6ff;
+                --ok: #3ccf6e;
+                --ok-soft: rgba(60, 207, 110, 0.14);
+                --warn: #f2b33d;
+                --warn-soft: rgba(242, 166, 12, 0.16);
+                --bad: #ff6b63;
+                --bad-soft: rgba(255, 78, 69, 0.14);
+                --shadow: 0 4px 32px rgba(0, 0, 0, 0.6);
+                --skeleton: rgba(255, 255, 255, 0.08);
+            }
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body { margin: 0; }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg);
+            font-family: Roboto, "Segoe UI", -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+            background: var(--bg);
             color: var(--text);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-            min-height: 100vh;
+            font-size: 14px;
+            line-height: 1.4;
+            overflow-x: hidden;
         }
 
-        .container {
-            width: 100%;
-            max-width: 600px;
+        button, input, select { font: inherit; color: inherit; }
+        button { cursor: pointer; }
+        a { color: var(--link); text-decoration: none; }
+        [hidden] { display: none !important; }
+
+        .ic { width: 24px; height: 24px; fill: currentColor; flex-shrink: 0; }
+        .ic.sm { width: 18px; height: 18px; }
+        .ic.xs { width: 14px; height: 14px; }
+
+        /* ---------- Top bar ---------- */
+        .topbar {
+            position: sticky; top: 0; z-index: 30;
+            height: 56px; padding: 0 16px;
+            display: flex; align-items: center; gap: 16px;
+            background: var(--bg);
         }
 
-        h1 {
-            text-align: center;
-            font-weight: 300;
-            margin-bottom: 30px;
-            color: var(--accent);
+        .brand {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 19px; font-weight: 700; letter-spacing: -0.6px;
+            white-space: nowrap; cursor: pointer; user-select: none;
+            background: none; border: 0; padding: 0;
+        }
+        .brand-logo { width: 32px; height: 22px; }
+        .brand small { font-size: 10px; color: var(--text-2); font-weight: 400; align-self: flex-start; margin-top: 6px; letter-spacing: 0; }
+
+        .search { flex: 1; display: flex; justify-content: center; min-width: 0; }
+        .search-wrap { position: relative; display: flex; width: 100%; max-width: 640px; }
+        .search-field {
+            flex: 1; display: flex; align-items: center; min-width: 0;
+            height: 40px; padding: 0 4px 0 16px;
+            background: var(--input-bg); border: 1px solid var(--input-border);
+            border-right: 0; border-radius: 40px 0 0 40px;
+        }
+        .search-field:focus-within { border-color: #1c62b9; box-shadow: inset 0 1px 2px rgba(0, 0, 0, .2); padding-left: 15px; border-width: 1px; }
+        .search-field input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 16px; }
+        .search-btn {
+            width: 64px; height: 40px; border: 1px solid var(--input-border);
+            border-radius: 0 40px 40px 0; background: var(--search-btn);
+            display: grid; place-items: center;
+        }
+        .search-btn:hover { background: var(--surface-hover); }
+
+        .icon-btn {
+            width: 40px; height: 40px; border-radius: 50%; border: 0;
+            background: transparent; display: grid; place-items: center; position: relative;
+        }
+        .icon-btn:hover { background: var(--surface); }
+        .icon-btn .count {
+            position: absolute; top: 2px; right: 0;
+            min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+            background: var(--brand); color: #fff; font-size: 11px; font-weight: 500;
+            display: grid; place-items: center;
         }
 
-        /* Search Box */
-        .search-box {
-            background-color: var(--surface);
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
+        /* Suggestions dropdown */
+        .suggest {
+            position: absolute; top: 44px; left: 0; right: 64px;
+            background: var(--bg-elev); border-radius: 12px; box-shadow: var(--shadow);
+            padding: 8px 0; z-index: 40; max-height: 70vh; overflow-y: auto;
+            border: 1px solid var(--border);
         }
-
-        input[type="text"] {
-            flex-grow: 1;
-            background: #2C2C2C;
-            border: 1px solid #333;
-            color: white;
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 16px;
-            outline: none;
+        .suggest-head { padding: 8px 16px 4px; font-size: 12px; color: var(--text-2); }
+        .suggest-item {
+            display: flex; align-items: center; gap: 12px; padding: 6px 16px; cursor: pointer;
         }
+        .suggest-item.active, .suggest-item:hover { background: var(--surface); }
+        .suggest-item img, .suggest-item .ph { width: 40px; height: 40px; border-radius: 4px; object-fit: cover; background: var(--skeleton); flex-shrink: 0; }
+        .suggest-item .ph { display: grid; place-items: center; color: var(--text-2); background: transparent; }
+        .suggest-text { flex: 1; min-width: 0; }
+        .suggest-title { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .suggest-sub { font-size: 12px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .suggest-dur { font-size: 12px; color: var(--text-2); font-variant-numeric: tabular-nums; }
 
-        input[type="text"]:focus {
-            border-color: var(--primary);
+        /* ---------- Chips ---------- */
+        .chips {
+            position: sticky; top: 56px; z-index: 20; background: var(--bg);
+            display: flex; gap: 12px; padding: 12px 24px; overflow-x: auto; scrollbar-width: none;
         }
-
-        button {
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background 0.2s;
+        .chips::-webkit-scrollbar { display: none; }
+        .chip {
+            height: 32px; padding: 0 12px; border-radius: 8px; border: 0;
+            background: var(--surface); font-weight: 500; white-space: nowrap;
+            display: inline-flex; align-items: center; gap: 6px;
         }
+        .chip:hover { background: var(--surface-hover); }
+        .chip.active { background: var(--inverse-bg); color: var(--inverse-fg); }
+        .chip .n { font-weight: 400; opacity: .7; }
 
-        button:hover {
-            background-color: #357ABD;
+        main { padding: 8px 24px 48px; }
+
+        /* ---------- Reference card ---------- */
+        .ref-card {
+            display: flex; gap: 20px; align-items: center;
+            border: 1px solid var(--border); border-radius: 12px; padding: 16px;
+            margin: 0 auto 24px; max-width: 2200px;
         }
-
-        button:disabled {
-            background-color: #555;
-            cursor: not-allowed;
-            opacity: 0.7;
+        .ref-cover { width: 112px; height: 112px; border-radius: 8px; object-fit: cover; background: var(--skeleton); flex-shrink: 0; }
+        .ref-info { flex: 1; min-width: 0; }
+        .ref-kicker { font-size: 12px; color: var(--text-2); display: flex; align-items: center; gap: 4px; }
+        .ref-title { font-size: 20px; font-weight: 700; margin: 2px 0; line-height: 1.25; }
+        .ref-sub { color: var(--text-2); }
+        .ref-sources { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+        .src-pill {
+            display: inline-flex; align-items: center; gap: 4px; font-size: 12px;
+            padding: 2px 8px; border-radius: 12px; background: var(--surface); color: var(--text);
         }
+        .src-pill b { font-weight: 500; font-variant-numeric: tabular-nums; }
+        .ref-length { text-align: right; flex-shrink: 0; }
+        .ref-length .big { font-size: 32px; font-weight: 300; font-variant-numeric: tabular-nums; line-height: 1; }
+        .ref-length .lbl { font-size: 12px; color: var(--text-2); margin-bottom: 8px; }
+        .ref-alts { margin: -12px auto 24px; max-width: 2200px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+        .ref-empty { color: var(--text-2); display: flex; gap: 8px; align-items: center; justify-content: center; max-width: 2200px; margin: 0 auto 20px; font-size: 13px; }
 
-        /* Results List */
-        #results-area {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
+        .btn {
+            height: 36px; padding: 0 16px; border-radius: 18px; border: 0;
+            background: var(--surface); font-weight: 500; white-space: nowrap;
+            display: inline-flex; align-items: center; gap: 6px;
         }
+        .btn:hover { background: var(--surface-hover); }
+        a.btn { color: var(--text); }
+        .btn.primary { background: var(--inverse-bg); color: var(--inverse-fg); }
+        .btn.primary:hover { opacity: .85; }
+        .btn.done { background: var(--ok-soft); color: var(--ok); }
+        .btn:disabled { opacity: .55; cursor: default; }
+        .btn.sm { height: 32px; padding: 0 12px; font-size: 13px; }
+        .btn .pct { font-variant-numeric: tabular-nums; }
 
-        .result-item {
-            background-color: var(--surface);
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #333;
-            cursor: pointer;
-            transition: transform 0.1s, background 0.2s;
-            display: flex;
-            flex-direction: column;
+        /* ---------- Grid ---------- */
+        .grid {
+            display: grid; gap: 40px 16px; max-width: 2200px; margin: 0 auto;
+            grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
         }
+        .card { cursor: pointer; outline: none; min-width: 0; }
+        .card:focus-visible .thumb { outline: 2px solid var(--link); outline-offset: 2px; }
 
-        .result-item:hover {
-            background-color: #252525;
-            transform: translateY(-2px);
+        .thumb {
+            position: relative; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden;
+            background: var(--skeleton);
         }
-
-        .result-title {
-            font-weight: 600;
-            font-size: 1.1em;
-            margin-bottom: 5px;
-            color: var(--text);
+        .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .2s; }
+        .card:hover .thumb img { transform: scale(1.02); }
+        .badge {
+            position: absolute; font-size: 12px; font-weight: 500; line-height: 18px;
+            padding: 1px 5px; border-radius: 4px; color: #fff; display: inline-flex; align-items: center; gap: 3px;
+            font-variant-numeric: tabular-nums;
         }
+        .badge.dur { right: 8px; bottom: 8px; background: rgba(0, 0, 0, .8); }
+        .badge.dev { left: 8px; top: 8px; }
+        .badge.saved { left: 8px; bottom: 8px; background: rgba(0, 0, 0, .8); }
+        .lv-exact { background: #0d7a3a; color: #fff; }
+        .lv-close { background: #2d7f6e; color: #fff; }
+        .lv-off { background: #f2a60c; color: #1a1a1a; }
+        .lv-far { background: #d93025; color: #fff; }
 
-        .result-channel {
-            font-size: 0.9em;
-            color: var(--text-secondary);
+        .quick-dl {
+            position: absolute; right: 8px; top: 8px; width: 36px; height: 36px; border-radius: 50%;
+            border: 0; background: rgba(0, 0, 0, .75); color: #fff; display: grid; place-items: center;
+            opacity: 0; transition: opacity .15s;
         }
+        .card:hover .quick-dl, .quick-dl:focus-visible { opacity: 1; }
+        .quick-dl:hover { background: #000; }
+        @media (hover: none) { .quick-dl { opacity: 1; } }
 
-        /* Status & Loading */
-        #status {
-            text-align: center;
-            margin: 20px 0;
-            min-height: 20px;
-            color: var(--text-secondary);
+        .card-meta { display: flex; gap: 12px; padding-top: 12px; }
+        .avatar {
+            width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+            display: grid; place-items: center; color: #fff; font-weight: 500; font-size: 15px;
         }
-
-        .error {
-            color: #CF6679 !important;
+        .card-text { min-width: 0; flex: 1; }
+        .card-title {
+            font-size: 16px; font-weight: 500; line-height: 22px; margin: 0 0 4px;
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+            word-break: break-word;
         }
-
-        /* Loader */
-        .loader {
-            border: 3px solid #333;
-            border-top: 3px solid var(--primary);
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-            display: none;
+        .card-sub { color: var(--text-2); display: flex; align-items: center; gap: 4px; min-width: 0; }
+        .card-sub span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+        .tag {
+            font-size: 12px; font-weight: 500; padding: 1px 6px; border-radius: 4px;
+            background: var(--surface); color: var(--text-2);
+            display: inline-flex; align-items: center; gap: 3px;
         }
+        .tag.reco { background: var(--brand); color: #fff; }
+        .tag.official { color: var(--text); }
+        .tag.variant { background: var(--warn-soft); color: var(--warn); }
 
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
+        /* Skeleton */
+        .sk { background: var(--skeleton); border-radius: 8px; animation: pulse 1.4s ease-in-out infinite; }
+        @keyframes pulse { 50% { opacity: .45; } }
 
-            100% {
-                transform: rotate(360deg);
-            }
+        /* Empty / hero */
+        .hero { max-width: 760px; margin: 48px auto; text-align: center; }
+        .hero-icon { width: 72px; height: 72px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; margin: 0 auto 16px; }
+        .hero-icon .ic { width: 36px; height: 36px; }
+        .hero h1 { font-size: 24px; font-weight: 500; margin: 0 0 8px; }
+        .hero p { color: var(--text-2); margin: 0 0 24px; }
+        .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; text-align: left; }
+        .step { background: var(--surface); border-radius: 12px; padding: 14px; }
+        .step b { display: block; margin-bottom: 4px; }
+        .step span { color: var(--text-2); font-size: 13px; }
+        .recent { margin-top: 40px; text-align: left; }
+        .recent h2 { font-size: 16px; font-weight: 500; margin: 0 0 12px; }
+        .recent-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+        .recent-item { display: flex; gap: 10px; align-items: center; padding: 6px; border-radius: 8px; min-width: 0; }
+        .recent-item img { width: 44px; height: 44px; border-radius: 4px; object-fit: cover; background: var(--skeleton); flex-shrink: 0; }
+        .recent-item div { min-width: 0; }
+        .recent-item b, .recent-item span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .recent-item b { font-weight: 500; }
+        .recent-item span { color: var(--text-2); font-size: 12px; }
+
+        .message { text-align: center; color: var(--text-2); padding: 48px 16px; }
+        .message .ic { width: 48px; height: 48px; margin-bottom: 8px; }
+        .message.error { color: var(--bad); }
+
+        /* ---------- Watch view ---------- */
+        .watch { display: flex; gap: 24px; max-width: 1754px; margin: 0 auto; padding-top: 8px; }
+        .watch-primary { flex: 1; min-width: 0; }
+        .watch-secondary { width: 402px; flex-shrink: 0; }
+
+        .back-btn { margin-bottom: 12px; }
+
+        .player { position: relative; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; background: #000; }
+        .player img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: .9; }
+        .player iframe { width: 100%; height: 100%; border: 0; display: block; }
+        .play-btn {
+            position: absolute; inset: 0; margin: auto; width: 68px; height: 48px; border: 0;
+            background: transparent; padding: 0;
         }
+        .play-btn svg { width: 68px; height: 48px; }
+        .play-btn .bg { fill: #212121; fill-opacity: .8; transition: fill .1s, fill-opacity .1s; }
+        .player:hover .play-btn .bg { fill: #ff0033; fill-opacity: 1; }
 
-        /* Editor Modal */
-        .overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
-            padding: 20px;
+        .watch-title { font-size: 20px; font-weight: 700; line-height: 28px; margin: 12px 0 8px; word-break: break-word; }
+        .owner { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .owner-info { display: flex; gap: 12px; align-items: center; min-width: 0; flex: 1 1 260px; }
+        .owner-info .avatar { width: 40px; height: 40px; }
+        .owner-name { font-size: 16px; font-weight: 500; display: flex; align-items: center; gap: 4px; }
+        .owner-sub { font-size: 12px; color: var(--text-2); }
+        .owner-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        .panel { background: var(--surface); border-radius: 12px; padding: 12px 16px; margin-top: 12px; }
+        .panel h2 { font-size: 16px; font-weight: 500; margin: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+        .muted { color: var(--text-2); }
+
+        .lenbars { display: grid; grid-template-columns: auto 1fr auto; gap: 6px 12px; align-items: center; margin-top: 4px; }
+        .lenbars .lbl { font-size: 12px; color: var(--text-2); }
+        .lenbars .bar { height: 8px; border-radius: 4px; background: var(--skeleton); overflow: hidden; }
+        .lenbars .bar i { display: block; height: 100%; border-radius: 4px; background: var(--text-2); }
+        .lenbars .bar i.vid { background: var(--brand); }
+        .lenbars .val { font-variant-numeric: tabular-nums; font-size: 13px; text-align: right; }
+        .dev-note { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 13px; }
+        .dev-pill { font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 10px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+        .meta-grid { display: grid; grid-template-columns: 140px 1fr; gap: 16px; }
+        .cover-box { display: flex; flex-direction: column; gap: 8px; }
+        .cover-box img, .cover-box .ph { width: 140px; height: 140px; border-radius: 8px; object-fit: cover; background: var(--skeleton); }
+        .cover-box .ph { display: grid; place-items: center; color: var(--text-2); }
+        .seg { display: flex; background: var(--surface); border-radius: 8px; padding: 2px; }
+        .seg button { flex: 1; border: 0; background: transparent; border-radius: 6px; font-size: 12px; padding: 4px 2px; white-space: nowrap; }
+        .seg button.active { background: var(--bg); box-shadow: 0 1px 2px rgba(0, 0, 0, .2); font-weight: 500; }
+        .seg button:disabled { opacity: .4; cursor: default; }
+        .fields { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px 12px; }
+        .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+        .field.w6 { grid-column: span 6; }
+        .field.w4 { grid-column: span 4; }
+        .field.w2 { grid-column: span 2; }
+                .field label { font-size: 12px; color: var(--text-2); }
+        .field input {
+            width: 100%; height: 38px; padding: 0 10px; border-radius: 8px;
+            border: 1px solid var(--input-border); background: var(--input-bg); outline: none;
         }
+        .field input:focus { border-color: var(--link); }
+        .path-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 13px; color: var(--text-2); word-break: break-all; }
+        .path-row code { font-family: "Roboto Mono", ui-monospace, Consolas, monospace; font-size: 12px; color: var(--text); }
+        .warn-row { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 13px; color: var(--warn); }
+        .meta-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
 
-        .editor {
-            background: var(--surface);
-            padding: 30px;
-            border-radius: 12px;
-            width: 100%;
-            max-width: 500px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        .match-list { display: flex; flex-direction: column; }
+        .match-row {
+            display: flex; gap: 12px; align-items: center; padding: 8px 16px; cursor: pointer;
+            border-top: 1px solid var(--border); background: transparent; border-left: 0; border-right: 0; border-bottom: 0;
+            text-align: left; width: 100%;
         }
+        .panel .match-row { padding: 8px 4px; }
+        .match-row:first-child { border-top: 0; }
+        .match-row:hover { background: var(--surface); }
+        .match-row.selected { box-shadow: inset 3px 0 0 var(--brand); }
+        .match-row img, .match-row .ph { width: 48px; height: 48px; border-radius: 4px; object-fit: cover; background: var(--skeleton); flex-shrink: 0; }
+        .match-text { flex: 1; min-width: 0; }
+        .match-text b { font-weight: 500; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .match-text span { font-size: 12px; color: var(--text-2); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .match-side { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+        .match-side .d { font-variant-numeric: tabular-nums; }
+        .srcs { display: flex; gap: 3px; }
+        .srcs i { font-style: normal; font-size: 10px; font-weight: 700; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-hover); }
 
-        .editor h2 {
-            margin-top: 0;
-            font-size: 1.4em;
-            margin-bottom: 20px;
+        .side-title { font-size: 16px; font-weight: 500; margin: 0 0 12px; }
+        .compact { display: flex; gap: 8px; margin-bottom: 8px; cursor: pointer; border-radius: 8px; }
+        .compact .thumb { width: 168px; flex-shrink: 0; border-radius: 8px; }
+        .compact .card-title { font-size: 14px; line-height: 20px; }
+        .compact .card-sub { font-size: 12px; }
+        .compact .badge { font-size: 11px; line-height: 16px; }
+        .compact .badge.dev { left: 4px; top: 4px; }
+        .compact .badge.dur { right: 4px; bottom: 4px; }
+
+        /* ---------- Downloads drawer ---------- */
+        .drawer {
+            position: fixed; top: 52px; right: 16px; z-index: 50;
+            width: 420px; max-width: calc(100vw - 32px); max-height: calc(100vh - 72px);
+            background: var(--bg-elev); border-radius: 12px; box-shadow: var(--shadow);
+            border: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden;
         }
+        .drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 8px 8px 16px; border-bottom: 1px solid var(--border); }
+        .drawer-head > div { display: flex; align-items: center; gap: 4px; }
+        .drawer-head h2 { font-size: 16px; font-weight: 400; margin: 0; }
+        .drawer-body { overflow-y: auto; padding: 8px 0; }
+        .job { display: flex; gap: 12px; padding: 8px 16px; align-items: center; }
+        .job img, .job .ph { width: 56px; height: 56px; border-radius: 6px; object-fit: cover; background: var(--skeleton); flex-shrink: 0; }
+        .job-text { flex: 1; min-width: 0; }
+        .job-text b { font-weight: 500; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .job-text .sub { font-size: 12px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .job-text .st { font-size: 12px; margin-top: 4px; display: flex; gap: 6px; align-items: center; }
+        .job-text .st.error { color: var(--bad); white-space: normal; }
+        .job-text .st.done { color: var(--ok); }
+        .progress { height: 3px; background: var(--skeleton); border-radius: 2px; margin-top: 6px; overflow: hidden; }
+        .progress i { display: block; height: 100%; background: var(--brand); transition: width .4s; }
+        .progress.indet i { width: 30% !important; animation: indet 1.2s ease-in-out infinite; }
+        @keyframes indet { 0% { margin-left: -30%; } 100% { margin-left: 100%; } }
+        .drawer-empty { padding: 32px 16px; text-align: center; color: var(--text-2); }
 
-        .form-group {
-            margin-bottom: 15px;
+        /* ---------- Toasts ---------- */
+        .toasts { position: fixed; left: 16px; bottom: 16px; z-index: 60; display: flex; flex-direction: column; gap: 8px; max-width: calc(100vw - 32px); }
+        .toast {
+            background: var(--inverse-bg); color: var(--inverse-fg); border-radius: 8px;
+            padding: 12px 16px; box-shadow: var(--shadow); display: flex; gap: 12px; align-items: center;
+            max-width: 480px; animation: up .2s ease-out;
         }
+        .toast.error { background: #c5221f; color: #fff; }
+        .toast button { background: none; border: 0; color: #3ea6ff; font-weight: 500; padding: 0; }
+        @keyframes up { from { transform: translateY(12px); opacity: 0; } }
 
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-size: 0.9em;
-            color: var(--text-secondary);
+        /* ---------- Responsive ---------- */
+        @media (max-width: 1100px) {
+            .watch { flex-direction: column; }
+            .watch-secondary { width: 100%; }
         }
-
-        .form-group input {
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        .editor-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 25px;
-        }
-
-        .btn-cancel {
-            background-color: #333;
-        }
-
-        .btn-cancel:hover {
-            background-color: #444;
+        @media (max-width: 720px) {
+            .topbar { gap: 8px; padding: 0 8px; }
+            .brand-text, .brand small { display: none; }
+            .search-btn { width: 48px; }
+            .suggest { right: 0; }
+            .chips { padding: 8px 16px; }
+            main { padding: 4px 16px 48px; }
+            .grid { grid-template-columns: 1fr; gap: 24px; }
+            .ref-card { flex-wrap: wrap; gap: 12px; }
+            .ref-cover { width: 72px; height: 72px; }
+            .ref-length { text-align: left; width: 100%; display: flex; align-items: center; gap: 12px; }
+            .ref-length .lbl { margin: 0; }
+            .steps { grid-template-columns: 1fr; }
+            .meta-grid { grid-template-columns: 1fr; }
+            .cover-box { flex-direction: row; align-items: center; }
+            .cover-box img, .cover-box .ph { width: 96px; height: 96px; }
+            .cover-box .seg { flex: 1; }
+            .fields { grid-auto-flow: row dense; }
+            .fields .field.w4 { grid-column: span 6; }
+            .fields .field.w2 { grid-column: span 3; }
+            .compact .thumb { width: 140px; }
+            .drawer { right: 8px; left: 8px; width: auto; max-width: none; }
         }
     </style>
 </head>
 
 <body>
+    <header class="topbar">
+        <button class="brand" id="brand" title="Startseite" aria-label="Startseite">
+            <svg class="brand-logo" viewBox="0 0 32 22" aria-hidden="true">
+                <rect width="32" height="22" rx="6" fill="#ff0033" />
+                <path fill="#fff" d="M17.5 4.5v8.1a3 3 0 1 0 1.8 2.75V8.2h3.2V4.5h-5z" />
+            </svg>
+            <span class="brand-text">Music Downloader</span>
+            <small>HA</small>
+        </button>
 
-    <div class="container">
-        <h1>Music Downloader</h1>
-
-        <div class="search-box">
-            <input type="text" id="query" placeholder="Search (e.g. Artist or Song)..." onkeypress="handleEnter(event)">
-            <button onclick="searchMusic()" id="btn-search">Search</button>
-        </div>
-
-        <div id="loader" class="loader"></div>
-        <div id="status"></div>
-
-        <div id="results-area"></div>
-    </div>
-
-    <!-- Metadata Editor Modal -->
-    <div class="overlay" id="editor-overlay">
-        <div class="editor">
-            <h2>Edit Metadata</h2>
-            <div id="editor-loading" style="text-align:center; padding: 20px; display:none;">
-                <div class="loader" style="display:block; margin-bottom:10px;"></div>
-                <span>Analyzing with AI...</span>
+        <form class="search" id="search-form" role="search" autocomplete="off">
+            <div class="search-wrap">
+                <div class="search-field">
+                    <input type="text" id="q" placeholder="Song oder Interpret suchen" aria-label="Suche"
+                        aria-autocomplete="list" aria-controls="suggest" spellcheck="false">
+                    <button type="button" class="icon-btn" id="clear-q" title="Löschen" aria-label="Suche löschen" hidden></button>
+                </div>
+                <button type="submit" class="search-btn" id="search-btn" title="Suchen" aria-label="Suchen"></button>
+                <div class="suggest" id="suggest" role="listbox" hidden></div>
             </div>
+        </form>
 
-            <div id="editor-form">
-                <div class="form-group">
-                    <label>Title</label>
-                    <input type="text" id="meta-title">
-                </div>
-                <div class="form-group">
-                    <label>Artists (Comma separated)</label>
-                    <input type="text" id="meta-artists">
-                </div>
-                <div class="form-group">
-                    <label>Album</label>
-                    <input type="text" id="meta-album">
-                </div>
-                <div class="form-group">
-                    <label>Year</label>
-                    <input type="text" id="meta-year">
-                </div>
+        <button class="icon-btn" id="dl-btn" title="Downloads" aria-label="Downloads"><span class="count" id="dl-count" hidden></span></button>
+    </header>
 
-                <div class="editor-actions">
-                    <button class="btn-cancel" onclick="closeEditor()">Cancel</button>
-                    <button onclick="confirmDownload()" id="btn-download">Download MP3</button>
-                </div>
+    <nav class="chips" id="chips" hidden></nav>
+
+    <main id="view-results"></main>
+    <main id="view-watch" hidden></main>
+
+    <aside class="drawer" id="drawer" hidden>
+        <div class="drawer-head">
+            <h2>Downloads</h2>
+            <div>
+                <button class="btn sm" id="clear-jobs">Erledigte entfernen</button>
+                <button class="icon-btn" id="close-drawer" aria-label="Schließen"></button>
             </div>
         </div>
-    </div>
+        <div class="drawer-body" id="drawer-body"></div>
+    </aside>
+
+    <div class="toasts" id="toasts" aria-live="polite"></div>
 
     <script>
-        let currentVideoUrl = "";
+        const ICONS = {
+            search: 'M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z',
+            close: 'M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
+            download: 'M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z',
+            check: 'M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z',
+            open: 'M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z',
+            note: 'M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z',
+            verified: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z',
+            back: 'M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z',
+            error: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z',
+            library: 'M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 5h-3v5.5a2.5 2.5 0 0 1-5 0 2.5 2.5 0 0 1 2.5-2.5c.57 0 1.08.19 1.5.51V5h4v2zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6z',
+            folder: 'M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z',
+            timer: 'M15 1H9v2h6V1zm-4 13h2V8h-2v6zm8.03-6.61 1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42A8.962 8.962 0 0 0 12 4c-4.97 0-9 4.03-9 9s4.02 9 9 9 9-4.03 9-9c0-2.12-.74-4.07-1.97-5.61zM12 20c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z',
+            swap: 'M6.99 11 3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z',
+            warn: 'M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z',
+        };
+        const SRC_SHORT = { itunes: 'iT', musicbrainz: 'MB', deezer: 'Dz' };
+        const LEVELS = {
+            exact: { cls: 'lv-exact', label: 'Originallänge', text: 'Entspricht der Länge der Album-/Single-Version.' },
+            close: { cls: 'lv-close', label: 'Fast gleich', text: 'Kleine Abweichung – meist nur Stille am Anfang oder Ende.' },
+            off: { cls: 'lv-off', label: 'Abweichend', text: 'Spürbare Abweichung – vermutlich Intro/Outro im Video.' },
+            far: { cls: 'lv-far', label: 'Stark abweichend', text: 'Starke Abweichung – wahrscheinlich eine andere Version (Live, Remix, Musikvideo mit Szenen).' },
+        };
+        const FILTERS = [
+            { id: 'all', label: 'Alle' },
+            { id: 'best', label: 'Beste Übereinstimmung' },
+            { id: 'length', label: 'Passende Länge', test: v => ['exact', 'close'].includes(v.match?.deviation?.level) },
+            { id: 'official', label: 'Offizielle Kanäle', test: v => v.match?.official },
+            { id: 'clean', label: 'Ohne Live/Remix', test: v => !(v.match?.flags || []).some(f => f.kind === 'variant') },
+        ];
+        const ACTIVE = ['queued', 'downloading', 'processing'];
 
-        function handleEnter(e) {
-            if (e.key === 'Enter') searchMusic();
-        }
+        const state = {
+            query: '', results: [], reference: null, matches: [], libErrors: [],
+            filter: 'all', loading: false, error: null, pinned: null, showAlts: false,
+            current: null, analysis: null, form: null, coverMode: 'library',
+            jobs: [], seenJobs: {}, downloaded: new Set(), history: [],
+        };
 
-        async function searchMusic() {
-            const query = document.getElementById('query').value;
-            if (!query) return;
+        /* ---------- helpers ---------- */
+        const $ = id => document.getElementById(id);
+        const SVGNS = 'http://www.w3.org/2000/svg';
 
-            const btn = document.getElementById('btn-search');
-            const status = document.getElementById('status');
-            const loader = document.getElementById('loader');
-            const resultsArea = document.getElementById('results-area');
-
-            status.innerText = "";
-            resultsArea.innerHTML = "";
-            btn.disabled = true;
-            loader.style.display = "block";
-
-            try {
-                const response = await fetch('search', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query: query })
-                });
-
-                const text = await response.text();
-                let data;
-                try {
-                    data = JSON.parse(text);
-                } catch (e) {
-                    throw new Error("Server Error (Check Logs): " + text.substring(0, 50));
-                }
-
-                if (data.results && data.results.length > 0) {
-                    renderResults(data.results);
-                } else if (data.found === false) { // Handle explicit "not found"
-                    status.innerText = "No results found.";
-                } else if (data.results && data.results.length === 0) {
-                    status.innerText = "No results found.";
-                } else {
-                    status.innerText = "Error: Invalid response format.";
-                }
-
-            } catch (error) {
-                status.innerText = "Error: " + error.message;
-                status.className = "error";
-            } finally {
-                btn.disabled = false;
-                loader.style.display = "none";
+        function h(tag, attrs, ...children) {
+            const el = document.createElement(tag);
+            for (const [k, v] of Object.entries(attrs || {})) {
+                if (v == null || v === false) continue;
+                if (k === 'class') el.className = v;
+                else if (k === 'style') el.style.cssText = v;
+                else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+                else el.setAttribute(k, v === true ? '' : v);
             }
-        }
-
-        function renderResults(results) {
-            const container = document.getElementById('results-area');
-            container.innerHTML = "";
-
-            results.forEach(video => {
-                const div = document.createElement('div');
-                div.className = 'result-item';
-                div.onclick = () => selectVideo(video);
-
-                div.innerHTML = `
-                    <div class="result-title">${escapeHtml(video.title)}</div>
-                    <div class="result-channel">${escapeHtml(video.uploader)}</div>
-                `;
-                container.appendChild(div);
-            });
-        }
-
-        async function selectVideo(video) {
-            currentVideoUrl = video.url || "https://youtube.com/watch?v=" + video.id;
-
-            // Show Overlay
-            document.getElementById('editor-overlay').style.display = 'flex';
-            document.getElementById('editor-form').style.display = 'none';
-            document.getElementById('editor-loading').style.display = 'block';
-
-            // Call Analyze
-            try {
-                const response = await fetch('analyze', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        title: video.title,
-                        channel: video.uploader
-                    })
-                });
-                const data = await response.json();
-
-                if (data.success && data.result) {
-                    populateEditor(data.result);
-                } else {
-                    alert("Analysis Failed: " + (data.message || "Unknown error"));
-                    closeEditor();
-                }
-
-            } catch (e) {
-                alert("Analysis Error: " + e.message);
-                closeEditor();
+            for (const c of children.flat(Infinity)) {
+                if (c == null || c === false) continue;
+                el.append(c.nodeType ? c : document.createTextNode(String(c)));
             }
+            return el;
         }
 
-        function populateEditor(proposal) {
-            document.getElementById('editor-loading').style.display = 'none';
-            document.getElementById('editor-form').style.display = 'block';
-
-            document.getElementById('meta-title').value = proposal.proposal_title || "";
-            document.getElementById('meta-artists').value = (proposal.proposal_artists || []).join(", ");
-            document.getElementById('meta-album').value = proposal.proposal_album || "";
-            document.getElementById('meta-year').value = proposal.proposal_year || "";
+        function icon(name, size) {
+            const svg = document.createElementNS(SVGNS, 'svg');
+            svg.setAttribute('viewBox', '0 0 24 24');
+            svg.setAttribute('class', 'ic' + (size ? ' ' + size : ''));
+            svg.setAttribute('aria-hidden', 'true');
+            const path = document.createElementNS(SVGNS, 'path');
+            path.setAttribute('d', ICONS[name]);
+            svg.append(path);
+            return svg;
         }
 
-        function closeEditor() {
-            document.getElementById('editor-overlay').style.display = 'none';
+        function img(src, attrs) {
+            if (!src) return h('div', { class: 'ph' }, icon('note'));
+            const el = h('img', Object.assign({ src, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }, attrs));
+            el.addEventListener('error', () => el.replaceWith(h('div', { class: 'ph' }, icon('note'))), { once: true });
+            return el;
         }
 
-        async function confirmDownload() {
-            const btn = document.getElementById('btn-download');
-            btn.disabled = true;
-            btn.innerText = "Starting...";
-
-            const payload = {
-                url: currentVideoUrl,
-                title: document.getElementById('meta-title').value,
-                artists: document.getElementById('meta-artists').value.split(',').map(s => s.trim()).filter(s => s),
-                album: document.getElementById('meta-album').value,
-                year: document.getElementById('meta-year').value
+        async function api(path, body) {
+            const opts = body === undefined ? {} : {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
             };
+            const res = await fetch(path, opts);
+            const text = await res.text();
+            let data;
+            try { data = JSON.parse(text); } catch (e) { throw new Error(`Serverfehler (${res.status}) – siehe Add-on-Log`); }
+            if (!res.ok || data.success === false) throw new Error(data.message || `Fehler ${res.status}`);
+            return data;
+        }
 
+        const pad = n => String(n).padStart(2, '0');
+        function fmtDur(s) {
+            if (s == null || isNaN(s)) return '';
+            s = Math.round(s);
+            const hh = Math.floor(s / 3600), mm = Math.floor(s % 3600 / 60), ss = s % 60;
+            return hh ? `${hh}:${pad(mm)}:${pad(ss)}` : `${mm}:${pad(ss)}`;
+        }
+        function fmtDelta(d) {
+            const sign = d > 0 ? '+' : d < 0 ? '−' : '±';
+            const a = Math.abs(d);
+            return a < 60 ? `${sign}${a} s` : `${sign}${fmtDur(a)}`;
+        }
+        function fmtViews(n) {
+            if (n == null) return '';
+            const f = (x) => x.toLocaleString('de-DE', { maximumFractionDigits: 1 });
+            if (n >= 1e9) return `${f(n / 1e9)} Mrd. Aufrufe`;
+            if (n >= 1e6) return `${f(n / 1e6)} Mio. Aufrufe`;
+            return `${n.toLocaleString('de-DE')} Aufrufe`;
+        }
+        function avatar(name) {
+            const label = (name || '?').replace(/\s*-\s*topic$/i, '').trim();
+            let hash = 0;
+            for (const ch of label) hash = (hash * 31 + ch.charCodeAt(0)) | 0;
+            const hue = Math.abs(hash) % 360;
+            return h('div', { class: 'avatar', style: `background:hsl(${hue} 45% 42%)`, 'aria-hidden': 'true' },
+                (label[0] || '?').toUpperCase());
+        }
+        function devBadge(dev, cls) {
+            if (!dev) return null;
+            const lv = LEVELS[dev.level];
+            return h('span', { class: `${cls} ${lv.cls}`, title: `${lv.label}: ${fmtDelta(dev.delta)} gegenüber Original` },
+                dev.level === 'exact' ? [icon('check', 'xs'), 'Original'] : fmtDelta(dev.delta));
+        }
+        function sourcesLabel(sources) {
+            return (sources || []).map(s => s.label).join(' · ');
+        }
+        function debounce(fn, ms) {
+            let t;
+            return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+        }
+        function store(key, value) {
+            try { sessionStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* storage unavailable */ }
+        }
+        function restore(key) {
+            try { return JSON.parse(sessionStorage.getItem(key)); } catch (e) { return null; }
+        }
+
+        function toast(text, opts = {}) {
+            const el = h('div', { class: 'toast' + (opts.error ? ' error' : ''), role: 'status' },
+                h('span', { style: 'flex:1' }, text),
+                opts.action ? h('button', { onclick: () => { opts.action.fn(); el.remove(); } }, opts.action.label) : null);
+            $('toasts').append(el);
+            setTimeout(() => el.remove(), opts.ms || 4500);
+        }
+
+        /* ---------- search + suggestions ---------- */
+        const qInput = $('q');
+        let suggestItems = [], suggestIdx = -1, suggestToken = 0;
+
+        const loadSuggest = debounce(async (value) => {
+            const token = ++suggestToken;
+            if (value.trim().length < 2) { hideSuggest(); return; }
             try {
-                const response = await fetch('download', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                const data = await api('suggest?q=' + encodeURIComponent(value));
+                if (token !== suggestToken || qInput.value !== value) return;
+                renderSuggest(value, data.results || []);
+            } catch (e) { hideSuggest(); }
+        }, 250);
+
+        function renderSuggest(value, items) {
+            suggestItems = [{ type: 'query', text: value }, ...items.map(m => ({ type: 'song', match: m }))];
+            suggestIdx = -1;
+            const box = $('suggest');
+            box.replaceChildren(
+                ...suggestItems.map((item, i) => {
+                    if (item.type === 'query') {
+                        return h('div', { class: 'suggest-item', role: 'option', 'data-i': i, onmousedown: e => { e.preventDefault(); pickSuggest(i); } },
+                            h('div', { class: 'ph' }, icon('search', 'sm')),
+                            h('div', { class: 'suggest-text' }, h('div', { class: 'suggest-title' }, item.text)));
+                    }
+                    const m = item.match;
+                    return h('div', { class: 'suggest-item', role: 'option', 'data-i': i, onmousedown: e => { e.preventDefault(); pickSuggest(i); } },
+                        img(m.cover),
+                        h('div', { class: 'suggest-text' },
+                            h('div', { class: 'suggest-title' }, m.title),
+                            h('div', { class: 'suggest-sub' }, [m.artist, m.album].filter(Boolean).join(' · '))),
+                        h('span', { class: 'suggest-dur' }, fmtDur(m.duration)));
+                }),
+            );
+            if (items.length) box.insertBefore(h('div', { class: 'suggest-head' }, 'Songs aus Musikbibliotheken'), box.children[1]);
+            box.hidden = false;
+        }
+
+        function hideSuggest() {
+            $('suggest').hidden = true;
+            suggestItems = []; suggestIdx = -1;
+        }
+
+        function moveSuggest(dir) {
+            if ($('suggest').hidden || !suggestItems.length) return false;
+            suggestIdx = (suggestIdx + dir + suggestItems.length) % suggestItems.length;
+            for (const el of $('suggest').querySelectorAll('.suggest-item')) {
+                el.classList.toggle('active', Number(el.dataset.i) === suggestIdx);
+            }
+            return true;
+        }
+
+        function pickSuggest(i) {
+            const item = suggestItems[i];
+            hideSuggest();
+            if (!item) return;
+            if (item.type === 'query') { search(item.text); return; }
+            const m = item.match;
+            const q = `${m.artists[0] || m.artist} - ${m.title}`;
+            qInput.value = q;
+            search(q, m);
+        }
+
+        async function search(query, pinned) {
+            query = (query || '').trim();
+            if (!query) return;
+            suggestToken++;
+            hideSuggest();
+            qInput.blur();
+            Object.assign(state, {
+                query, pinned: pinned || null, loading: true, error: null, results: [],
+                reference: null, matches: [], libErrors: [], filter: 'all', showAlts: false,
+            });
+            closeWatch(true);
+            renderResults();
+            try {
+                const data = await api('search', { query, reference: pinned || null });
+                Object.assign(state, {
+                    results: data.results || [], reference: data.reference, matches: data.matches || [],
+                    libErrors: data.library_errors || [],
                 });
-                const data = await response.json();
-
-                closeEditor();
-                alert(data.message); // "Download started..."
-
+                state.results.forEach(v => v.downloaded && state.downloaded.add(v.id));
+                store('last-search', { query, results: state.results, reference: state.reference, matches: state.matches, libErrors: state.libErrors });
             } catch (e) {
-                alert("Submit Error: " + e.message);
+                state.error = e.message;
             } finally {
-                btn.disabled = false;
-                btn.innerText = "Download MP3";
+                state.loading = false;
+                renderResults();
             }
         }
 
-        function escapeHtml(text) {
-            if (!text) return "";
-            return text
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
+        async function switchReference(match) {
+            state.reference = match;
+            state.showAlts = false;
+            try {
+                const data = await api('compare', { videos: state.results, reference: match });
+                state.results = data.results;
+                store('last-search', { query: state.query, results: state.results, reference: state.reference, matches: state.matches, libErrors: state.libErrors });
+            } catch (e) { toast('Vergleich fehlgeschlagen: ' + e.message, { error: true }); }
+            renderResults();
         }
+
+        /* ---------- results view ---------- */
+        function visibleResults() {
+            const f = FILTERS.find(x => x.id === state.filter) || FILTERS[0];
+            let list = state.results.filter(v => !f.test || f.test(v));
+            if (state.filter === 'best') list = [...list].sort((a, b) => (b.match?.score || 0) - (a.match?.score || 0));
+            return list;
+        }
+
+        function renderChips() {
+            const nav = $('chips');
+            nav.hidden = !state.results.length || !!state.current;
+            nav.replaceChildren(...FILTERS.map(f => {
+                const n = f.test ? state.results.filter(f.test).length : null;
+                return h('button', {
+                    class: 'chip' + (state.filter === f.id ? ' active' : ''),
+                    onclick: () => { state.filter = f.id; renderResults(); },
+                }, f.label, n != null ? h('span', { class: 'n' }, n) : null);
+            }));
+        }
+
+        function renderReference() {
+            const ref = state.reference;
+            if (!ref) {
+                const why = state.libErrors.length ? state.libErrors.join(', ') : 'Kein Treffer in MusicBrainz, iTunes oder Deezer';
+                return h('div', { class: 'ref-empty' }, icon('library', 'sm'), `${why} – Längenvergleich nicht möglich.`);
+            }
+            const others = state.matches.filter(m => !(m.title === ref.title && m.artist === ref.artist && m.duration === ref.duration));
+            const card = h('section', { class: 'ref-card', 'aria-label': 'Referenz aus Musikbibliotheken' },
+                img(ref.cover, { class: 'ref-cover' }),
+                h('div', { class: 'ref-info' },
+                    h('div', { class: 'ref-kicker' }, icon('library', 'xs'), state.pinned ? 'Ausgewählte Referenz' : 'Referenz aus Musikbibliotheken'),
+                    h('div', { class: 'ref-title' }, ref.title),
+                    h('div', { class: 'ref-sub' }, [ref.artist, ref.album, ref.year, ref.genre].filter(Boolean).join(' · ')),
+                    h('div', { class: 'ref-sources' },
+                        (ref.sources || []).map(s => h(s.link ? 'a' : 'span', { class: 'src-pill', href: s.link, target: '_blank', rel: 'noopener' },
+                            s.label, s.duration ? h('b', null, fmtDur(s.duration)) : null)),
+                        state.libErrors.map(e => h('span', { class: 'src-pill', title: e }, icon('warn', 'xs'), e)))),
+                h('div', { class: 'ref-length' },
+                    h('div', { class: 'big' }, fmtDur(ref.duration) || '–'),
+                    h('div', { class: 'lbl' }, 'Originallänge'),
+                    others.length ? h('button', { class: 'btn sm', onclick: () => { state.showAlts = !state.showAlts; renderResults(); } },
+                        icon('swap', 'sm'), state.showAlts ? 'Schließen' : 'Andere Version') : null));
+            if (!state.showAlts) return card;
+            return [card, h('div', { class: 'ref-alts match-list' }, others.map(m => matchRow(m, { onpick: () => switchReference(m) })))];
+        }
+
+        function matchRow(m, { onpick, selected, deviation } = {}) {
+            return h('button', { class: 'match-row' + (selected ? ' selected' : ''), onclick: onpick, type: 'button' },
+                img(m.cover),
+                h('div', { class: 'match-text' },
+                    h('b', null, m.title),
+                    h('span', null, [m.artist, m.album, m.year].filter(Boolean).join(' · '))),
+                h('div', { class: 'match-side' },
+                    h('span', { class: 'd' }, fmtDur(m.duration)),
+                    deviation ? h('span', { class: `dev-pill ${LEVELS[deviation.level].cls}` }, deviation.level === 'exact' ? 'passt' : fmtDelta(deviation.delta)) : null,
+                    h('span', { class: 'srcs', title: sourcesLabel(m.sources) }, (m.sources || []).map(s => h('i', null, SRC_SHORT[s.source] || '?')))));
+        }
+
+        function videoTags(v) {
+            const m = v.match || {};
+            const tags = [];
+            if (v.recommended) tags.push(h('span', { class: 'tag reco' }, icon('check', 'xs'), 'Empfohlen'));
+            if (m.topic) tags.push(h('span', { class: 'tag official' }, 'Album-Audio'));
+            else if (m.official) tags.push(h('span', { class: 'tag official' }, 'Offiziell'));
+            for (const f of m.flags || []) tags.push(h('span', { class: 'tag' + (f.kind === 'variant' ? ' variant' : '') }, f.label));
+            return tags.length ? h('div', { class: 'tags' }, tags) : null;
+        }
+
+        function thumb(v, { quick } = {}) {
+            const job = jobFor(v.id);
+            const saved = state.downloaded.has(v.id) || job?.status === 'done';
+            return h('div', { class: 'thumb' },
+                img(v.thumbnail),
+                v.duration ? h('span', { class: 'badge dur' }, fmtDur(v.duration)) : null,
+                devBadge(v.match?.deviation, 'badge dev'),
+                saved ? h('span', { class: 'badge saved' }, icon('check', 'xs'), 'In Bibliothek')
+                    : job && ACTIVE.includes(job.status) ? h('span', { class: 'badge saved' }, icon('download', 'xs'), `${job.progress || 0} %`) : null,
+                quick && !saved && !(job && ACTIVE.includes(job.status))
+                    ? h('button', { class: 'quick-dl', title: 'Direkt herunterladen (automatische Metadaten)', 'aria-label': 'Direkt herunterladen', onclick: e => { e.stopPropagation(); quickDownload(v); } }, icon('download', 'sm'))
+                    : null);
+        }
+
+        function channelLine(v) {
+            return h('div', { class: 'card-sub' },
+                h('span', null, v.channel || 'Unbekannter Kanal'),
+                v.verified || v.match?.official ? icon('verified', 'xs') : null);
+        }
+
+        function videoCard(v) {
+            return h('article', {
+                class: 'card', tabindex: '0', 'data-id': v.id,
+                onclick: () => openWatch(v),
+                onkeydown: e => { if (e.key === 'Enter') openWatch(v); },
+            },
+                thumb(v, { quick: true }),
+                h('div', { class: 'card-meta' },
+                    avatar(v.channel),
+                    h('div', { class: 'card-text' },
+                        h('h3', { class: 'card-title', title: v.title }, v.title),
+                        channelLine(v),
+                        v.views != null ? h('div', { class: 'card-sub' }, h('span', null, fmtViews(v.views))) : null,
+                        videoTags(v))));
+        }
+
+        function skeletonGrid() {
+            return h('div', { class: 'grid' }, Array.from({ length: 8 }, () => h('div', null,
+                h('div', { class: 'thumb sk' }),
+                h('div', { class: 'card-meta' },
+                    h('div', { class: 'avatar sk' }),
+                    h('div', { class: 'card-text' },
+                        h('div', { class: 'sk', style: 'height:18px;width:90%;margin-bottom:8px' }),
+                        h('div', { class: 'sk', style: 'height:14px;width:60%' }))))));
+        }
+
+        function renderHero() {
+            const recent = state.history.slice(0, 12);
+            return h('div', { class: 'hero' },
+                h('div', { class: 'hero-icon' }, icon('library')),
+                h('h1', null, 'Songs finden, vergleichen & speichern'),
+                h('p', null, 'Suche wie auf YouTube – die Metadaten werden automatisch mit MusicBrainz, iTunes und Deezer abgeglichen.'),
+                h('div', { class: 'steps' },
+                    h('div', { class: 'step' }, h('b', null, '1 · Suchen'), h('span', null, 'Tippe einen Songnamen – Vorschläge aus Musikbibliotheken erscheinen sofort.')),
+                    h('div', { class: 'step' }, h('b', null, '2 · Vergleichen'), h('span', null, 'Jedes Video zeigt, wie stark seine Länge vom Original abweicht.')),
+                    h('div', { class: 'step' }, h('b', null, '3 · Speichern'), h('span', null, 'MP3 mit Cover, Album, Jahr & Genre landet direkt in deiner Bibliothek.'))),
+                recent.length ? h('section', { class: 'recent' },
+                    h('h2', null, 'Zuletzt heruntergeladen'),
+                    h('div', { class: 'recent-list' }, recent.map(r => h('div', { class: 'recent-item', title: r.path || '' },
+                        img(r.image),
+                        h('div', null, h('b', null, r.title), h('span', null, r.artist)))))) : null);
+        }
+
+        function renderResults() {
+            const view = $('view-results');
+            renderChips();
+            if (state.loading) {
+                view.replaceChildren(h('div', { class: 'ref-card' },
+                    h('div', { class: 'ref-cover sk' }),
+                    h('div', { class: 'ref-info' },
+                        h('div', { class: 'sk', style: 'height:12px;width:160px;margin-bottom:10px' }),
+                        h('div', { class: 'sk', style: 'height:22px;width:50%;margin-bottom:8px' }),
+                        h('div', { class: 'sk', style: 'height:14px;width:35%' }))), skeletonGrid());
+                return;
+            }
+            if (state.error) {
+                view.replaceChildren(h('div', { class: 'message error' }, icon('error'), h('div', null, state.error),
+                    h('p', null, h('button', { class: 'btn', onclick: () => search(state.query, state.pinned) }, 'Erneut versuchen'))));
+                return;
+            }
+            if (!state.query) { view.replaceChildren(renderHero()); return; }
+            if (!state.results.length) {
+                view.replaceChildren(h('div', { class: 'message' }, icon('search'), h('div', null, `Keine Videos zu „${state.query}“ gefunden.`)));
+                return;
+            }
+            const list = visibleResults();
+            view.replaceChildren(
+                ...[renderReference()].flat(),
+                list.length ? h('div', { class: 'grid' }, list.map(videoCard))
+                    : h('div', { class: 'message' }, 'Keine Videos für diesen Filter.'));
+        }
+
+        /* ---------- watch view ---------- */
+        function openWatch(v, fromHistory) {
+            state.current = v;
+            state.analysis = null;
+            state.form = null;
+            state.coverMode = 'library';
+            if (!fromHistory) history.pushState({ v: v.id }, '', '#v=' + encodeURIComponent(v.id));
+            $('view-results').hidden = true;
+            $('view-watch').hidden = false;
+            $('chips').hidden = true;
+            window.scrollTo(0, 0);
+            renderWatch();
+            analyze(v);
+        }
+
+        function closeWatch(silent) {
+            if (!state.current) return;
+            state.current = null;
+            $('view-watch').hidden = true;
+            $('view-watch').replaceChildren();
+            $('view-results').hidden = false;
+            if (location.hash) history[silent ? 'replaceState' : 'pushState']({}, '', location.pathname + location.search);
+            renderChips();
+        }
+
+        function player(v) {
+            const box = h('div', { class: 'player' });
+            const start = () => {
+                box.replaceChildren(h('iframe', {
+                    src: `https://www.youtube-nocookie.com/embed/${encodeURIComponent(v.id)}?autoplay=1&rel=0&modestbranding=1`,
+                    title: v.title, allow: 'autoplay; encrypted-media; picture-in-picture; fullscreen',
+                    allowfullscreen: true, referrerpolicy: 'strict-origin-when-cross-origin',
+                }));
+            };
+            const btn = h('button', { class: 'play-btn', 'aria-label': 'Abspielen', onclick: start });
+            btn.innerHTML = '<svg viewBox="0 0 68 48" aria-hidden="true"><path class="bg" d="M66.52 7.74c-.78-2.93-2.49-5.41-5.42-6.19C55.79.13 34 0 34 0S12.21.13 6.9 1.55c-2.93.78-4.63 3.26-5.42 6.19C.06 13.05 0 24 0 24s.06 10.95 1.48 16.26c.78 2.93 2.49 5.41 5.42 6.19C12.21 47.87 34 48 34 48s21.79-.13 27.1-1.55c2.93-.78 4.64-3.26 5.42-6.19C67.94 34.95 68 24 68 24s-.06-10.95-1.48-16.26z"/><path d="M45 24 27 14v20" fill="#fff"/></svg>';
+            box.append(img(v.thumbnail), btn);
+            return box;
+        }
+
+        function renderWatch() {
+            const v = state.current;
+            if (!v) return;
+            const related = state.results.filter(x => x.id !== v.id);
+            $('view-watch').replaceChildren(h('div', { class: 'watch' },
+                h('div', { class: 'watch-primary' },
+                    h('button', { class: 'btn sm back-btn', onclick: () => history.length > 1 && location.hash ? history.back() : closeWatch() }, icon('back', 'sm'), 'Zurück zu den Ergebnissen'),
+                    player(v),
+                    h('h1', { class: 'watch-title' }, v.title),
+                    h('div', { class: 'owner' },
+                        h('div', { class: 'owner-info' },
+                            avatar(v.channel),
+                            h('div', { style: 'min-width:0' },
+                                h('div', { class: 'owner-name' }, v.channel || 'Unbekannter Kanal', v.verified || v.match?.official ? icon('verified', 'xs') : null),
+                                h('div', { class: 'owner-sub' }, [fmtViews(v.views), fmtDur(v.duration)].filter(Boolean).join(' · ')))),
+                        h('div', { class: 'owner-actions' },
+                            h('span', { id: 'dl-main-slot' }),
+                            h('a', { class: 'btn', href: `https://www.youtube.com/watch?v=${encodeURIComponent(v.id)}`, target: '_blank', rel: 'noopener' }, icon('open', 'sm'), 'YouTube'))),
+                    h('div', { id: 'length-panel' }),
+                    h('div', { id: 'meta-panel' }),
+                    h('div', { id: 'matches-panel' })),
+                h('aside', { class: 'watch-secondary' },
+                    related.length ? h('h2', { class: 'side-title' }, 'Weitere Ergebnisse') : null,
+                    related.map(r => h('div', { class: 'compact', onclick: () => openWatch(r), tabindex: '0', onkeydown: e => { if (e.key === 'Enter') openWatch(r); } },
+                        thumb(r),
+                        h('div', { class: 'card-text' },
+                            h('h3', { class: 'card-title', title: r.title }, r.title),
+                            channelLine(r),
+                            videoTags(r)))))));
+            renderDownloadButton();
+            renderLengthPanel();
+            renderMetaPanel();
+        }
+
+        async function analyze(v) {
+            try {
+                const data = await api('analyze', { id: v.id, title: v.title, channel: v.channel, duration: v.duration });
+                if (state.current !== v) return;
+                const r = data.result;
+                state.analysis = r;
+                state.form = {
+                    title: r.proposal_title || '',
+                    artists: (r.proposal_artists || []).join(', '),
+                    album: r.proposal_album || '',
+                    year: r.proposal_year || '',
+                    genre: r.genre || '',
+                    track_number: r.track_number || '',
+                    isrc: r.isrc || null,
+                    cover: r.cover || null,
+                    reference_duration: r.reference_duration,
+                    deviation: r.deviation,
+                    sources: r.sources || [],
+                    selected: r.selected,
+                    path: r.target_path,
+                    exists: r.exists,
+                };
+                state.coverMode = r.cover ? 'library' : 'youtube';
+            } catch (e) {
+                if (state.current !== v) return;
+                state.analysis = { error: e.message };
+            }
+            renderLengthPanel();
+            renderMetaPanel();
+        }
+
+        function renderLengthPanel() {
+            const slot = $('length-panel');
+            if (!slot) return;
+            const v = state.current;
+            const f = state.form;
+            const refDur = f?.reference_duration ?? state.reference?.duration;
+            const dev = f ? f.deviation : v.match?.deviation;
+            if (!refDur || !v.duration) { slot.replaceChildren(); return; }
+            const max = Math.max(refDur, v.duration);
+            const lv = dev ? LEVELS[dev.level] : null;
+            slot.replaceChildren(h('section', { class: 'panel' },
+                h('div', { class: 'panel-head' }, h('h2', null, icon('timer', 'sm'), 'Längenvergleich'),
+                    lv ? h('span', { class: `dev-pill ${lv.cls}` }, `${lv.label} · ${fmtDelta(dev.delta)}`) : null),
+                h('div', { class: 'lenbars' },
+                    h('span', { class: 'lbl' }, 'Video'), h('div', { class: 'bar' }, h('i', { class: 'vid', style: `width:${v.duration / max * 100}%` })), h('span', { class: 'val' }, fmtDur(v.duration)),
+                    h('span', { class: 'lbl' }, 'Original'), h('div', { class: 'bar' }, h('i', { style: `width:${refDur / max * 100}%` })), h('span', { class: 'val' }, fmtDur(refDur))),
+                lv ? h('div', { class: 'dev-note muted' }, lv.text) : null,
+                (v.match?.flags || []).length ? h('div', { class: 'tags', style: 'margin-top:8px' }, v.match.flags.map(fl => h('span', { class: 'tag' + (fl.kind === 'variant' ? ' variant' : '') }, fl.label))) : null));
+        }
+
+        function field(key, label, width, attrs) {
+            return h('div', { class: 'field ' + width },
+                h('label', { for: 'f-' + key }, label),
+                h('input', Object.assign({
+                    id: 'f-' + key, value: state.form[key] ?? '', type: 'text',
+                    oninput: e => { state.form[key] = e.target.value; refreshTarget(); },
+                }, attrs)));
+        }
+
+        function renderMetaPanel() {
+            const slot = $('meta-panel');
+            if (!slot) return;
+            const a = state.analysis;
+            if (!a) {
+                slot.replaceChildren(h('section', { class: 'panel' },
+                    h('div', { class: 'panel-head' }, h('h2', null, 'Metadaten'), h('span', { class: 'muted' }, 'Gleiche mit Musikbibliotheken ab …')),
+                    h('div', { class: 'meta-grid' },
+                        h('div', { class: 'sk', style: 'width:140px;height:140px' }),
+                        h('div', null, [90, 70, 50].map(w => h('div', { class: 'sk', style: `height:38px;width:${w}%;margin-bottom:10px` }))))));
+                $('matches-panel').replaceChildren();
+                return;
+            }
+            if (a.error) {
+                slot.replaceChildren(h('section', { class: 'panel' }, h('div', { class: 'message error', style: 'padding:16px' }, 'Analyse fehlgeschlagen: ' + a.error,
+                    h('p', null, h('button', { class: 'btn', onclick: () => { state.analysis = null; renderMetaPanel(); analyze(state.current); } }, 'Erneut versuchen')))));
+                return;
+            }
+            const f = state.form;
+            const sourceText = a.source === 'library' ? `Abgeglichen mit ${sourcesLabel(f.sources)}`
+                : a.source === 'ai' ? 'KI-Vorschlag (kein Bibliothekstreffer)' : 'Aus dem Videotitel erkannt (kein Bibliothekstreffer)';
+            const coverSrc = state.coverMode === 'library' && f.cover ? f.cover : state.current.thumbnail;
+            slot.replaceChildren(h('section', { class: 'panel' },
+                h('div', { class: 'panel-head' },
+                    h('h2', null, 'Metadaten', h('span', { class: 'src-pill' }, a.source === 'library' ? icon('library', 'xs') : icon('warn', 'xs'), sourceText))),
+                h('div', { class: 'meta-grid' },
+                    h('div', { class: 'cover-box' },
+                        img(coverSrc, { style: state.coverMode === 'youtube' ? 'object-fit:cover' : '' }),
+                        h('div', { class: 'seg', role: 'group', 'aria-label': 'Cover-Quelle' },
+                            h('button', { class: state.coverMode === 'library' ? 'active' : '', disabled: !f.cover, onclick: () => { state.coverMode = 'library'; renderMetaPanel(); } }, 'Cover'),
+                            h('button', { class: state.coverMode === 'youtube' ? 'active' : '', onclick: () => { state.coverMode = 'youtube'; renderMetaPanel(); } }, 'Thumbnail'))),
+                    h('div', { class: 'fields' },
+                        field('title', 'Titel', 'w6'),
+                        field('artists', 'Interpreten (kommagetrennt)', 'w6'),
+                        field('album', 'Album', 'w4'),
+                        field('year', 'Jahr', 'w2', { inputmode: 'numeric', maxlength: '4' }),
+                        field('genre', 'Genre', 'w4'),
+                        field('track_number', 'Track-Nr.', 'w2', { inputmode: 'numeric' }))),
+                h('div', { class: 'path-row' }, icon('folder', 'sm'), h('code', { id: 'target-path' }, f.path || '')),
+                h('div', { class: 'warn-row', id: 'exists-row', hidden: !f.exists }, icon('warn', 'xs'), 'Diese Datei existiert bereits und wird überschrieben.'),
+                h('div', { class: 'meta-actions' }, h('span', { id: 'dl-form-slot' }))));
+            renderMatchesPanel();
+            renderDownloadButton();
+        }
+
+        function renderMatchesPanel() {
+            const slot = $('matches-panel');
+            const a = state.analysis;
+            if (!slot || !a || a.error) return;
+            const matches = a.matches || [];
+            slot.replaceChildren(h('section', { class: 'panel' },
+                h('div', { class: 'panel-head' },
+                    h('h2', null, icon('library', 'sm'), 'Treffer in Musikbibliotheken'),
+                    h('span', { class: 'muted' }, matches.length ? 'Klicken zum Übernehmen' : '')),
+                matches.length ? h('div', { class: 'match-list' }, matches.map((m, i) => matchRow(m, {
+                    selected: state.form.selected === i, deviation: m.deviation, onpick: () => applyMatch(m, i),
+                }))) : h('div', { class: 'muted' }, (a.errors || []).length ? a.errors.join(', ') : 'Keine passenden Einträge gefunden – die Felder wurden aus dem Videotitel befüllt.')));
+        }
+
+        function applyMatch(m, i) {
+            Object.assign(state.form, {
+                title: m.title, artists: (m.artists || []).join(', '), album: m.album || m.title, year: m.year || '',
+                genre: m.genre || '', track_number: m.track_number || '', isrc: m.isrc || null, cover: m.cover || null,
+                reference_duration: m.duration, deviation: m.deviation, sources: m.sources || [], selected: i,
+            });
+            state.analysis.source = 'library';
+            state.coverMode = m.cover ? 'library' : 'youtube';
+            renderLengthPanel();
+            renderMetaPanel();
+            refreshTarget();
+            toast(`Metadaten von ${sourcesLabel(m.sources)} übernommen`);
+        }
+
+        const refreshTarget = debounce(async () => {
+            if (!state.form) return;
+            const form = state.form;
+            try {
+                const data = await api('target', { artists: splitArtists(form.artists), title: form.title, album: form.album || form.title });
+                if (state.form !== form) return;
+                form.path = data.path; form.exists = data.exists;
+                const p = $('target-path'), w = $('exists-row');
+                if (p) p.textContent = data.path;
+                if (w) w.hidden = !data.exists;
+            } catch (e) { /* ignore */ }
+        }, 300);
+
+        const splitArtists = s => (s || '').split(',').map(x => x.trim()).filter(Boolean);
+
+        /* ---------- downloads ---------- */
+        function jobFor(videoId) {
+            return state.jobs.find(j => j.video_id === videoId);
+        }
+
+        function downloadButton(v) {
+            const job = jobFor(v.id);
+            if (job && ACTIVE.includes(job.status)) {
+                return h('button', { class: 'btn primary', disabled: true }, icon('download', 'sm'),
+                    job.status === 'queued' ? 'In Warteschlange' : job.status === 'processing' ? 'Konvertiere …' : h('span', { class: 'pct' }, `Lädt ${job.progress || 0} %`));
+            }
+            const saved = job?.status === 'done' || state.downloaded.has(v.id);
+            const ready = !!state.form;
+            return h('button', {
+                class: 'btn ' + (saved ? 'done' : 'primary'), disabled: !ready,
+                title: ready ? '' : 'Metadaten werden noch ermittelt',
+                onclick: () => startDownload(v),
+            }, icon(saved ? 'check' : 'download', 'sm'), saved ? 'Erneut herunterladen' : 'Herunterladen');
+        }
+
+        function renderDownloadButton() {
+            const v = state.current;
+            if (!v) return;
+            for (const id of ['dl-main-slot', 'dl-form-slot']) {
+                const slot = $(id);
+                if (slot) slot.replaceChildren(downloadButton(v));
+            }
+        }
+
+        function payloadFrom(v, form, coverMode) {
+            return {
+                url: v.url || `https://www.youtube.com/watch?v=${v.id}`,
+                video_id: v.id,
+                title: (form.title || '').trim() || v.title,
+                artists: splitArtists(form.artists),
+                album: (form.album || '').trim(),
+                year: (form.year || '').trim(),
+                genre: (form.genre || '').trim(),
+                track_number: String(form.track_number || '').trim() || null,
+                isrc: form.isrc || null,
+                cover: coverMode === 'library' ? form.cover : null,
+                thumbnail: v.thumbnail,
+            };
+        }
+
+        async function submitDownload(payload) {
+            const data = await api('download', payload);
+            upsertJob(data.job);
+            if (!data.created) toast('Dieser Song wird bereits heruntergeladen.');
+            refreshJobs();
+            return data;
+        }
+
+        async function startDownload(v) {
+            if (!state.form) return;
+            try {
+                await submitDownload(payloadFrom(v, state.form, state.coverMode));
+                toast(`„${state.form.title}“ wird heruntergeladen`, { action: { label: 'Downloads', fn: openDrawer } });
+            } catch (e) {
+                toast('Download fehlgeschlagen: ' + e.message, { error: true });
+            }
+            renderDownloadButton();
+        }
+
+        async function quickDownload(v) {
+            toast(`Metadaten für „${v.title}“ werden ermittelt …`, { ms: 2500 });
+            try {
+                const data = await api('analyze', { id: v.id, title: v.title, channel: v.channel, duration: v.duration });
+                const r = data.result;
+                const form = {
+                    title: r.proposal_title, artists: (r.proposal_artists || []).join(', '), album: r.proposal_album,
+                    year: r.proposal_year, genre: r.genre, track_number: r.track_number, isrc: r.isrc, cover: r.cover,
+                };
+                await submitDownload(payloadFrom(v, form, r.cover ? 'library' : 'youtube'));
+                const via = r.source === 'library' ? sourcesLabel(r.sources) : 'Videotitel';
+                toast(`„${r.proposal_title}“ gestartet (Metadaten: ${via})`, { action: { label: 'Downloads', fn: openDrawer } });
+            } catch (e) {
+                toast('Download fehlgeschlagen: ' + e.message, { error: true });
+            }
+        }
+
+        function upsertJob(job) {
+            if (!job) return;
+            const i = state.jobs.findIndex(j => j.id === job.id);
+            if (i >= 0) state.jobs[i] = job; else state.jobs.unshift(job);
+            onJobsChanged();
+        }
+
+        let pollTimer = null;
+        async function refreshJobs() {
+            clearTimeout(pollTimer);
+            try {
+                const data = await api('jobs');
+                state.jobs = data.jobs || [];
+                onJobsChanged();
+            } catch (e) { /* server restarting */ }
+            const active = state.jobs.some(j => ACTIVE.includes(j.status));
+            pollTimer = setTimeout(refreshJobs, active ? 1000 : 10000);
+        }
+
+        function onJobsChanged() {
+            for (const job of state.jobs) {
+                const prev = state.seenJobs[job.id];
+                if (prev && prev !== job.status) {
+                    if (job.status === 'done') {
+                        state.downloaded.add(job.video_id);
+                        toast(`Gespeichert: ${job.artist ? job.artist + ' – ' : ''}${job.title}`);
+                        loadHistory();
+                    } else if (job.status === 'error') {
+                        toast(`Fehler bei „${job.title}“: ${job.message}`, { error: true, ms: 8000 });
+                    }
+                }
+                state.seenJobs[job.id] = job.status;
+            }
+            const active = state.jobs.filter(j => ACTIVE.includes(j.status)).length;
+            $('dl-count').hidden = !active;
+            $('dl-count').textContent = active;
+            if (!$('drawer').hidden) renderDrawer();
+            renderDownloadButton();
+            updateCardBadges();
+        }
+
+        function updateCardBadges() {
+            if (!state.results.length || state.current) return;
+            for (const el of document.querySelectorAll('.card[data-id]')) {
+                const v = state.results.find(x => x.id === el.dataset.id);
+                if (!v) continue;
+                const job = jobFor(v.id);
+                const sig = `${state.downloaded.has(v.id)}|${job?.status}|${job?.progress}`;
+                if (el.dataset.sig === sig) continue;
+                el.dataset.sig = sig;
+                el.querySelector('.thumb').replaceWith(thumb(v, { quick: true }));
+            }
+        }
+
+        function renderDrawer() {
+            const body = $('drawer-body');
+            if (!state.jobs.length) {
+                body.replaceChildren(h('div', { class: 'drawer-empty' }, icon('download'), h('div', null, 'Noch keine Downloads in dieser Sitzung.')));
+                return;
+            }
+            body.replaceChildren(...state.jobs.map(j => {
+                const active = ACTIVE.includes(j.status);
+                return h('div', { class: 'job' },
+                    img(j.image),
+                    h('div', { class: 'job-text' },
+                        h('b', null, j.title),
+                        h('div', { class: 'sub' }, [j.artist, j.album].filter(Boolean).join(' · ')),
+                        active ? h('div', { class: 'progress' + (j.status === 'downloading' && j.progress ? '' : ' indet') }, h('i', { style: `width:${j.progress || 0}%` })) : null,
+                        h('div', { class: 'st ' + j.status },
+                            j.status === 'done' ? icon('check', 'xs') : j.status === 'error' ? icon('error', 'xs') : null,
+                            j.status === 'done' ? (j.path || 'Gespeichert') : active && j.status === 'downloading' && j.progress ? `${j.message} ${j.progress} %` : j.message)));
+            }));
+        }
+
+        function openDrawer() {
+            $('drawer').hidden = false;
+            renderDrawer();
+        }
+
+        async function loadHistory() {
+            try {
+                const data = await api('history');
+                state.history = data.history || [];
+                state.history.forEach(h => h.video_id && state.downloaded.add(h.video_id));
+                if (!state.query && !state.current) renderResults();
+            } catch (e) { /* ignore */ }
+        }
+
+        /* ---------- wiring ---------- */
+        $('search-btn').append(icon('search'));
+        $('clear-q').append(icon('close'));
+        $('dl-btn').prepend(icon('download'));
+        $('close-drawer').append(icon('close'));
+
+        $('search-form').addEventListener('submit', e => {
+            e.preventDefault();
+            if (suggestIdx >= 0) { pickSuggest(suggestIdx); return; }
+            search(qInput.value);
+        });
+        qInput.addEventListener('input', () => {
+            $('clear-q').hidden = !qInput.value;
+            loadSuggest(qInput.value);
+        });
+        qInput.addEventListener('keydown', e => {
+            if (e.key === 'ArrowDown' && moveSuggest(1)) e.preventDefault();
+            else if (e.key === 'ArrowUp' && moveSuggest(-1)) e.preventDefault();
+            else if (e.key === 'Escape') hideSuggest();
+        });
+        qInput.addEventListener('focus', () => { if (qInput.value.trim().length >= 2) loadSuggest(qInput.value); });
+        qInput.addEventListener('blur', () => setTimeout(hideSuggest, 120));
+        $('clear-q').addEventListener('click', () => { qInput.value = ''; $('clear-q').hidden = true; hideSuggest(); qInput.focus(); });
+        $('brand').addEventListener('click', () => {
+            qInput.value = ''; $('clear-q').hidden = true;
+            Object.assign(state, { query: '', results: [], reference: null, matches: [], error: null, pinned: null });
+            store('last-search', null);
+            closeWatch();
+            renderResults();
+        });
+        $('dl-btn').addEventListener('click', () => { if ($('drawer').hidden) openDrawer(); else $('drawer').hidden = true; });
+        $('close-drawer').addEventListener('click', () => { $('drawer').hidden = true; });
+        $('clear-jobs').addEventListener('click', async () => {
+            try { state.jobs = (await api('jobs/clear', {})).jobs; onJobsChanged(); } catch (e) { toast(e.message, { error: true }); }
+        });
+        document.addEventListener('click', e => {
+            if (!$('drawer').hidden && !$('drawer').contains(e.target) && !$('dl-btn').contains(e.target) && !e.target.closest('.toast')) $('drawer').hidden = true;
+        });
+        document.addEventListener('keydown', e => {
+            const typing = ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName);
+            if (e.key === '/' && !typing) { e.preventDefault(); qInput.focus(); qInput.select(); }
+            if (e.key === 'Escape' && !typing) {
+                if (!$('drawer').hidden) $('drawer').hidden = true;
+                else if (state.current) history.back();
+            }
+        });
+        window.addEventListener('popstate', () => {
+            const m = location.hash.match(/^#v=(.+)$/);
+            const v = m && state.results.find(x => x.id === decodeURIComponent(m[1]));
+            if (v) openWatch(v, true);
+            else { closeWatch(true); renderResults(); }
+        });
+
+        // Restore the last search (e.g. after switching HA panels)
+        const last = restore('last-search');
+        if (last && last.query) {
+            Object.assign(state, { query: last.query, results: last.results || [], reference: last.reference, matches: last.matches || [], libErrors: last.libErrors || [] });
+            qInput.value = last.query;
+            $('clear-q').hidden = false;
+        }
+        if (location.hash) history.replaceState({}, '', location.pathname + location.search);
+        renderResults();
+        loadHistory();
+        refreshJobs();
     </script>
 </body>
 

@@ -1,43 +1,45 @@
 import os
 import yt_dlp
 from mutagen.easyid3 import EasyID3
-from mutagen.id3 import ID3, ID3NoHeaderError
+from mutagen.id3 import ID3, APIC, ID3NoHeaderError
 import config
-import re
+import metadata
 import traceback
 import copy
+
+NETWORK_OPTS = {
+    # Fix 403 Forbidden: Force IPv4 and use Android client
+    'source_address': '0.0.0.0',
+    'extractor_args': {
+        'youtube': {
+            'player_client': ['android', 'web'],
+        }
+    },
+}
+
+
+def sanitize_name(name):
+    """Make a string safe for Windows/SMB file and folder names."""
+    name = (name or "")
+    for bad, good in (("/", "_"), ("\\", "_"), (":", "-"), ("*", ""), ("?", ""), ("\"", "'"),
+                      ("<", ""), (">", ""), ("|", "")):
+        name = name.replace(bad, good)
+    # Windows hates trailing dots/spaces on folders
+    return name.strip().rstrip(". ")
+
 
 class MusicDownloader:
     def __init__(self):
         # Base options
         self.base_opts = {
             'format': 'bestaudio/best',
-            'postprocessors': [
-                {
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': 'mp3',
-                    'preferredquality': '320',
-                },
-                {
-                    'key': 'EmbedThumbnail', 
-                },
-                {
-                    'key': 'FFmpegMetadata', 
-                    'add_metadata': True,
-                }
-            ],
             'quiet': True,
             'no_warnings': True,
+            'noprogress': True,
             'overwrites': True,
-            # Fix 403 Forbidden: Force IPv4 and use Android client
-            'source_address': '0.0.0.0', 
-            'extractor_args': {
-                'youtube': {
-                    'player_client': ['android', 'web'],
-                }
-            }, 
         }
-        
+        self.base_opts.update(copy.deepcopy(NETWORK_OPTS))
+
         if hasattr(config, 'BIN_DIR') and config.BIN_DIR and os.path.exists(config.BIN_DIR):
              self.base_opts['ffmpeg_location'] = config.BIN_DIR
 
@@ -130,235 +132,264 @@ class MusicDownloader:
             print(f"OpenAI Error: {e}")
             return None
 
-    def search_video(self, query):
+    def search_video(self, query, limit=20):
         search_opts = {
             'quiet': True,
-            'default_search': 'ytsearch15', 
             'skip_download': True,
             'ignoreerrors': True,
-            'extract_flat': False, # Changed to False to ensure we get 'uploader' and other metadata
-            # Copy robust network options
-            'source_address': '0.0.0.0',
-            'extractor_args': {
-                'youtube': {
-                    'player_client': ['android', 'web'],
-                }
-            }
+            # Flat extraction returns title, channel, duration, views and thumbnails
+            # of all results in a single request (much faster than full extraction).
+            'extract_flat': 'in_playlist',
         }
+        search_opts.update(copy.deepcopy(NETWORK_OPTS))
         try:
             with yt_dlp.YoutubeDL(search_opts) as ydl:
                 print(f"Searching for: {query}")
-                result = ydl.extract_info(query, download=False)
-                
+                result = ydl.extract_info(f"ytsearch{limit}:{query}", download=False) or {}
+
                 results_list = []
-                
-                if 'entries' in result:
-                    for entry in result['entries']:
-                        if not entry: continue
-                        # Filter out obviously bad results if needed (e.g., extremely long/short)
-                        results_list.append({
-                            'id': entry.get('id'),
-                            'title': entry.get('title'),
-                            'uploader': entry.get('uploader'),
-                            'url': entry.get('url') or entry.get('webpage_url'),
-                            'duration': entry.get('duration'),
-                            # 'thumbnail': entry.get('thumbnail') # flat extraction might not have good thumbnails
-                        })
-                
-                return {'found': True, 'results': results_list}
+                for entry in result.get('entries') or []:
+                    if not entry or not entry.get('id'):
+                        continue
+                    if entry.get('live_status') in ('is_live', 'is_upcoming'):
+                        continue
+                    video_id = entry['id']
+                    channel = entry.get('channel') or entry.get('uploader') or ""
+                    results_list.append({
+                        'id': video_id,
+                        'title': entry.get('title') or "",
+                        'channel': channel,
+                        'uploader': channel,
+                        'url': f"https://www.youtube.com/watch?v={video_id}",
+                        'duration': entry.get('duration'),
+                        'views': entry.get('view_count'),
+                        'verified': bool(entry.get('channel_is_verified')),
+                        'thumbnail': self._pick_thumbnail(entry),
+                    })
+
+                return {'found': bool(results_list), 'results': results_list}
 
         except Exception as e:
             print(f"Search Error: {e}")
             traceback.print_exc()
-            return {'found': False, 'error': str(e)}
+            return {'found': False, 'results': [], 'error': str(e)}
 
-    def analyze_metadata(self, title, channel):
+    @staticmethod
+    def _pick_thumbnail(entry):
+        thumbs = [t for t in (entry.get('thumbnails') or []) if t.get('url')]
+        sized = [t for t in thumbs if t.get('width') and t['width'] <= 720]
+        if sized:
+            return max(sized, key=lambda t: t['width'])['url']
+        # hqdefault always exists; the UI crops it to 16:9
+        return f"https://i.ytimg.com/vi/{entry['id']}/hqdefault.jpg"
+
+    def analyze_metadata(self, title, channel, duration=None):
         """
-        Generates metadata proposal for the selected video.
+        Generates a metadata proposal for the selected video by comparing it
+        with public music libraries (MusicBrainz, iTunes, Deezer).
         """
-        # Try AI first
         ai_proposal = self._get_ai_metadata(title, channel)
-        
         if ai_proposal:
-            artists, final_title, album, year = ai_proposal
-            print("Using AI Metadata Proposal.")
+            artists, song_title, ai_album, ai_year = ai_proposal
+            parse_source = 'ai'
         else:
-            print("Using Regex Metadata Proposal.")
-            artists, final_title = self.clean_metadata(channel, title)
-            album = ""
-            year = ""
-        
-        return {
-            'proposal_artists': artists,
-            'proposal_title': final_title,
-            'proposal_album': album,
-            'proposal_year': year
-        }
+            artists, song_title = self.clean_metadata(channel, title)
+            ai_album, ai_year = "", ""
+            parse_source = 'parsed'
+        artists = artists or ["Unknown Artist"]
+
+        library = metadata.lookup(
+            query=f"{artists[0]} {song_title}", artist=artists[0], title=song_title)
+        matches = library['matches']
+        for match in matches:
+            match['deviation'] = metadata.deviation(duration, match.get('duration'))
+
+        best_idx, confident = metadata.choose_for_video(matches, artists[0], song_title, duration)
+        best = matches[best_idx] if best_idx is not None and confident else None
+
+        if best:
+            print(f"Using library metadata ({', '.join(s['label'] for s in best['sources'])}).")
+            proposal = {
+                'proposal_artists': best['artists'] or artists,
+                'proposal_title': best['title'],
+                'proposal_album': best['album'] or best['title'],
+                'proposal_year': best['year'] or ai_year,
+                'genre': best['genre'],
+                'cover': best['cover'],
+                'isrc': best['isrc'],
+                'track_number': best['track_number'],
+                'reference_duration': best['duration'],
+                'deviation': best['deviation'],
+                'source': 'library',
+                'sources': best['sources'],
+                'confidence': best['confidence'],
+            }
+        else:
+            print(f"Using {parse_source} metadata proposal (no confident library match).")
+            proposal = {
+                'proposal_artists': artists,
+                'proposal_title': song_title,
+                # Singles use the song title as album name
+                'proposal_album': ai_album or song_title,
+                'proposal_year': ai_year,
+                'genre': "",
+                'cover': None,
+                'isrc': None,
+                'track_number': None,
+                'reference_duration': None,
+                'deviation': None,
+                'source': parse_source,
+                'sources': [],
+                'confidence': 0,
+            }
+
+        proposal['matches'] = matches
+        proposal['selected'] = best_idx if best else None
+        proposal['errors'] = library['errors']
+        return proposal
 
     def clean_metadata(self, channel, title):
         """
         Smart parsing to separate Artist and Title correctly.
         Returns: (artists_list, song_title)
         """
-        artist_str = channel
-        song_title = title
-        
-        # 1. Separator Check: "MainArtist - SongTitle"
-        if " - " in title:
-            parts = title.split(" - ", 1)
-            artist_str = parts[0].strip()
-            song_title = parts[1].strip()
-        
-        # 2. Extract featured artists from Title (e.g. "Song (feat. X)")
-        featured_artists = []
-        # Look for feat. patterns
-        feat_pattern = r"(?i)(?:feat\.?|ft\.?|featuring)\s+(.+?)(?=\)|\]|$)"
-        matches = re.findall(feat_pattern, song_title)
-        for match in matches:
-            # Clean match (remove trailing brackets if regex got greedy)
-            feat_name = match.strip()
-            if feat_name.endswith(')'): feat_name = feat_name[:-1]
-            if feat_name.endswith(']'): feat_name = feat_name[:-1]
-            featured_artists.append(feat_name)
+        return metadata.parse_video_title(title, channel)
 
-        # 3. Clean junk from Title
-        junk_patterns = [
-            r"\(Official Video\)", r"\(Official Audio\)", r"\(Lyrics\)", 
-            r"\[Official Video\]", r"\[Audio\]", 
-            r"(?i)[\(\[]?(?:feat\.?|ft\.?|featuring)\s+.+?[\)\]]?",
-            # Extra Cleaners
-            r"(?i)\[HD\]", r"(?i)\[HQ\]", r"(?i)\(HD\)", r"(?i)\(HQ\)",
-            r"(?i)\(Video\)", r"(?i)\[Video\]",
-            r"(?i)\(Official\)", r"(?i)\[Official\]",
-            r"(?i)4K", r"(?i)HD"
-        ]
-        for pattern in junk_patterns:
-            song_title = re.sub(pattern, "", song_title, flags=re.IGNORECASE).strip()
+    def build_target(self, artists, title, album):
+        """Returns (directory, filename, relative path) for a track: Artist/Album/Artist - Title.mp3"""
+        safe_artist = sanitize_name((artists or ["Unknown"])[0]) or "Unknown_Artist"
+        safe_album = sanitize_name(album) or "Unknown_Album"
+        safe_title = sanitize_name(title) or "Unknown"
+        final_dir = os.path.join(config.DOWNLOAD_DIR, safe_artist, safe_album)
+        filename = f"{safe_artist} - {safe_title}.mp3"
+        return final_dir, filename, f"{safe_artist}/{safe_album}/{filename}"
 
-        # 4. Split Artists String (e.g. "Martin Garrix, Macklemore & Patrick Stump")
-        # We split by comma (,) and Ampersand (&) and " x "
-        artist_str = re.sub(r"(?i)\s+x\s+", " & ", artist_str)
-        primary_artists = re.split(r",|&", artist_str)
-        
-        # Clean and collect final list
-        final_artists = []
-        for a in primary_artists:
-            a = a.strip()
-            if a and a not in final_artists:
-                final_artists.append(a)
-                
-        # Parse featured artists string too
-        for f in featured_artists:
-            subs = re.split(r",|&", f)
-            for s in subs:
-                s = s.strip()
-                if s and s not in final_artists:
-                    final_artists.append(s)
+    def target_exists(self, artists, title, album):
+        final_dir, filename, rel = self.build_target(artists, title, album)
+        return rel, os.path.exists(os.path.join(final_dir, filename))
 
-        if not final_artists:
-            final_artists = ["Unknown Artist"]
+    def download_track(self, url, manual_artists=None, manual_title=None, manual_album=None, manual_year=None,
+                       genre=None, cover_url=None, isrc=None, track_number=None, progress_cb=None):
+        """
+        Downloads, converts and tags a track.
+        Returns (ok, message, relative_path).
+        """
+        def report(status, percent=None, message=None):
+            if progress_cb:
+                try:
+                    progress_cb(status, percent, message)
+                except Exception:
+                    pass
 
-        return final_artists, song_title
-
-    def download_track(self, url, manual_artists=None, manual_title=None, manual_album=None, manual_year=None):
         try:
             if not os.path.exists(config.DOWNLOAD_DIR):
                 os.makedirs(config.DOWNLOAD_DIR, exist_ok=True)
-            
-            # Phase 1: Meta
-            ydl_opts_info = { 'quiet': True, 'skip_download': True, 'format': 'bestaudio/best' }
-            
-            artists_list = manual_artists if manual_artists else ["Unknown"]
-            title = manual_title if manual_title else "Unknown"
-            album = manual_album if manual_album else "Unknown"
+
+            artists_list = manual_artists if manual_artists else None
+            title = manual_title if manual_title else None
             year = manual_year if manual_year else ""
-            genre = "Unknown"
-            
-            with yt_dlp.YoutubeDL(ydl_opts_info) as ydl:
-                print(f"Fetching metadata for {url}...")
-                info = ydl.extract_info(url, download=False)
-                
-                if not manual_artists or not manual_title:
-                     # Fallback if somehow not passed (should not happen with new UI)
-                     raw_channel = info.get('uploader', 'Unknown Artist')
-                     raw_title = info.get('title', 'Unknown Title')
-                     auto_artists, auto_title = self.clean_metadata(raw_channel, raw_title)
-                     if not manual_artists: artists_list = auto_artists
-                     if not manual_title: title = auto_title
 
-                if info.get('categories') and isinstance(info['categories'], list) and len(info['categories']) > 0:
-                    genre = info['categories'][0]
-                
-                print(f"Final Plan -> Artists: {artists_list}, Title: '{title}', Album: '{album}'")
+            if not artists_list or not title:
+                # Fallback if the UI did not send metadata
+                with yt_dlp.YoutubeDL({'quiet': True, 'skip_download': True}) as ydl:
+                    print(f"Fetching metadata for {url}...")
+                    info = ydl.extract_info(url, download=False)
+                auto_artists, auto_title = self.clean_metadata(info.get('uploader'), info.get('title'))
+                artists_list = artists_list or auto_artists
+                title = title or auto_title
 
-            # Phase 2: Download
-            filename_artist_str = artists_list[0]
-            
-            # Helper to sanitize for Windows filenames
-            def sanitize_name(name):
-                # Replace bad chars with _ or -
-                return name.replace("/", "_").replace("\\", "_").replace(":", "-").replace("*", "").replace("?", "").replace("\"", "'").replace("<", "").replace(">", "").replace("|", "").strip()
+            album = manual_album if manual_album else title
+            final_dir, final_filename, rel_path = self.build_target(artists_list, title, album)
+            os.makedirs(final_dir, exist_ok=True)
+            print(f"Final Plan -> Artists: {artists_list}, Title: '{title}', Album: '{album}'")
 
-            safe_artist = sanitize_name(filename_artist_str)
-            # Remove trailing dots manually (windows hates them at end of folders)
-            if safe_artist.endswith('.'): safe_artist = safe_artist[:-1]
-            if not safe_artist: safe_artist = "Unknown_Artist"
-            
-            # Safe Album
-            safe_album = sanitize_name(album)
-            if safe_album.endswith('.'): safe_album = safe_album[:-1]
-            if not safe_album: safe_album = "Unknown_Album"
+            cover_data, cover_mime = metadata.fetch_cover(cover_url) if cover_url else (None, None)
 
-            safe_title = sanitize_name(title)
-            
-            # Construct final paths: DownloadDir / Artist / Album
-            final_dir = os.path.join(config.DOWNLOAD_DIR, safe_artist, safe_album)
-            if not os.path.exists(final_dir):
-                os.makedirs(final_dir, exist_ok=True)
-
-            final_filename = f"{safe_artist} - {safe_title}.mp3"
-            
             dl_opts = copy.deepcopy(self.base_opts)
-            # We explicitly set the path including the artist/album folder
-            dl_opts['outtmpl'] = os.path.join(final_dir, f"{safe_artist} - {safe_title}.%(ext)s")
-            
+            dl_opts['outtmpl'] = os.path.join(final_dir, final_filename[:-4] + ".%(ext)s")
+            postprocessors = [
+                {'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '320'},
+                {'key': 'FFmpegMetadata', 'add_metadata': True},
+            ]
+            if not cover_data:
+                # No library cover: embed the YouTube thumbnail instead
+                dl_opts['writethumbnail'] = True
+                postprocessors.insert(0, {'key': 'FFmpegThumbnailsConvertor', 'format': 'jpg', 'when': 'before_dl'})
+                postprocessors.append({'key': 'EmbedThumbnail', 'already_have_thumbnail': False})
+            dl_opts['postprocessors'] = postprocessors
+
+            def on_progress(d):
+                if d.get('status') == 'downloading':
+                    total = d.get('total_bytes') or d.get('total_bytes_estimate')
+                    if total:
+                        report('downloading', 90.0 * d.get('downloaded_bytes', 0) / total, 'Lädt herunter …')
+                elif d.get('status') == 'finished':
+                    report('processing', 90, 'Konvertiere zu MP3 …')
+
+            def on_postprocess(d):
+                if d.get('status') == 'started':
+                    report('processing', 93, 'Konvertiere zu MP3 …')
+
+            dl_opts['progress_hooks'] = [on_progress]
+            dl_opts['postprocessor_hooks'] = [on_postprocess]
+
             print(f"Starting Download -> {final_filename} in {final_dir}")
-            
+            report('downloading', 0, 'Lädt herunter …')
             with yt_dlp.YoutubeDL(dl_opts) as ydl_dl:
-                ydl_dl.download([url])
-                
+                info = ydl_dl.extract_info(url, download=True) or {}
+
+            if not genre and isinstance(info.get('categories'), list) and info['categories']:
+                genre = info['categories'][0]
+
             final_path = os.path.join(final_dir, final_filename)
-            
-            if os.path.exists(final_path):
-                self._tag_file(final_path, artists_list, title, album, year, genre)
-                self._tag_file(final_path, artists_list, title, album, year, genre)
-                return True, f"Saved: {safe_artist}/{safe_album}/{final_filename}"
-            else:
-                return True, f"Downloaded (Check folder): {safe_artist}/{safe_album}/{final_filename}"
+            if not os.path.exists(final_path):
+                return True, f"Heruntergeladen (Ordner prüfen): {rel_path}", rel_path
+
+            report('processing', 97, 'Schreibe Tags …')
+            self._tag_file(final_path, artists_list, title, album, year, genre,
+                           isrc=isrc, track_number=track_number)
+            if cover_data:
+                self._embed_cover(final_path, cover_data, cover_mime)
+            return True, f"Gespeichert: {rel_path}", rel_path
 
         except Exception as e:
             print(f"Download Error: {e}")
-            import traceback
             traceback.print_exc()
-            return False, str(e)
+            return False, str(e), None
 
-    def _tag_file(self, filepath, artists_list, title, album, year, genre):
+    def _tag_file(self, filepath, artists_list, title, album, year, genre, isrc=None, track_number=None):
         try:
             try:
                 tags = EasyID3(filepath)
             except ID3NoHeaderError:
                 tags = EasyID3()
-            
+
             tags['artist'] = artists_list
+            tags['albumartist'] = artists_list[0]
             tags['title'] = title
             tags['album'] = album
-            tags['genre'] = genre
+            if genre:
+                tags['genre'] = genre
             if year:
                 tags['date'] = year
                 tags['originaldate'] = year
-            
+            if isrc:
+                tags['isrc'] = isrc
+            if track_number:
+                tags['tracknumber'] = str(track_number)
+
             tags.save(filepath)
             print(f"Tags updated: Artists={artists_list}, Title='{title}', Album='{album}'")
-            
+
         except Exception as e:
             print(f"Tagging Error: {e}")
+
+    def _embed_cover(self, filepath, data, mime):
+        try:
+            tags = ID3(filepath)
+            tags.delall('APIC')
+            tags.add(APIC(encoding=3, mime=mime or 'image/jpeg', type=3, desc='Cover', data=data))
+            tags.save(filepath)
+            print("Cover embedded from music library.")
+        except Exception as e:
+            print(f"Cover Error: {e}")

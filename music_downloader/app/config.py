@@ -27,6 +27,9 @@ if IS_HA:
     # Read from Add-on Config
     DOWNLOAD_DIR = get_ha_option("download_dir", "/share/downloads/Music")
     OPENAI_API_KEY = get_ha_option("openai_api_key", "")
+    METADATA_COUNTRY = get_ha_option("metadata_country", "DE") or "DE"
+    # Persistent add-on storage (download history)
+    DATA_DIR = "/data"
     
     # In Docker/Alpine, ffmpeg is installed via APK to /usr/bin/ffmpeg
     # We can rely on PATH or specify explicitly.
@@ -37,6 +40,8 @@ else:
     # LOCAL WINDOWS MODE
     DOWNLOAD_DIR = os.path.join(BASE_DIR, "downloads")
     OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+    METADATA_COUNTRY = os.environ.get("METADATA_COUNTRY", "DE")
+    DATA_DIR = os.path.join(BASE_DIR, "data")
     BIN_DIR = os.path.join(BASE_DIR, "bin")
     FFMPEG_BIN = os.path.join(BIN_DIR, "ffmpeg.exe")
     FFPROBE_BIN = os.path.join(BIN_DIR, "ffprobe.exe")

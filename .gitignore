@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+music_downloader/app/downloads/
+music_downloader/app/data/
