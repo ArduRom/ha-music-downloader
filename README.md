@@ -11,11 +11,15 @@ Die Lieder werden automatisch mit **Artist** (Kanalname) und **Titel** getaggt u
 
 ## ✨ Features
 
-*   🔎 **Integrierte Suche:** Suche direkt im Add-on nach Titeln (kein Copy-Paste von URLs nötig).
-*   🎧 **High Quality:** Lädt Audio in **320kbps MP3** herunter.
-*   🏷️ **Auto-Tagging:** Automatische ID3-Tags (Artist & Title) und Cover-Art (Thumbnail).
-*   📱 **Responsive UI:** Funktioniert nahtlos in der Home Assistant App (Ingress / Seitenleiste).
-*   📂 **NAS Support:** Speichert direkt in `/share/downloads` (konfigurierbar).
+*   📺 **Oberfläche wie YouTube:** Ergebnisraster mit Vorschaubildern, Dauer, Kanal & Aufrufen, Watch-Seite mit eingebettetem Player – hell/dunkel automatisch.
+*   🔎 **Live-Vorschläge:** Schon beim Tippen erscheinen passende Songs (Cover, Interpret, Album, Länge) aus Musikbibliotheken.
+*   📚 **Automatischer Metadaten-Abgleich:** Titel, Interpreten, Album, Jahr, Genre, Track-Nr., ISRC und Album-Cover werden mit **MusicBrainz**, **iTunes** und **Deezer** abgeglichen (kostenlos, kein API-Key nötig).
+*   ⏱️ **Längenvergleich:** Jedes Video zeigt, wie stark es von der Originallänge abweicht (✓ Original, +11 s, +1:12 …). Live-, Remix-, Sped-Up-, Karaoke- & Loop-Versionen werden markiert, die beste Übereinstimmung wird empfohlen.
+*   🧹 **Filter:** Beste Übereinstimmung · Passende Länge · Offizielle Kanäle · Ohne Live/Remix.
+*   ⬇️ **Download-Warteschlange:** Fortschrittsanzeige, mehrere Downloads parallel, Ein-Klick-Download direkt aus dem Raster, Hinweis bei bereits vorhandenen Dateien.
+*   🎧 **High Quality:** **320 kbps MP3** mit echtem quadratischem Album-Cover (statt YouTube-Thumbnail) und vollständigen ID3-Tags.
+*   📂 **Saubere Ordnerstruktur:** `Interpret/Album/Interpret - Titel.mp3` – perfekt für **Synology DS Audio**, Plex oder Jellyfin.
+*   🤖 **Optional KI:** Mit OpenAI-Key wird der Videotitel zusätzlich per KI zerlegt, bevor die Bibliotheken abgefragt werden.
 
 ---
 
@@ -32,8 +36,12 @@ Die Lieder werden automatisch mit **Artist** (Kanalname) und **Titel** getaggt u
     Lade den Store neu, suche nach **"Youtube Music Downloader"** und klicke auf *Installieren*.
 
 3.  **Konfiguration (Optional):**
-    Im Reiter *Konfiguration* kannst du den Zielordner anpassen (Standard: `/share/downloads/Music`).
-    *Stelle sicher, dass dein NAS in Home Assistant unter "Netzwerkspeicher" eingebunden ist, damit `/share` funktioniert.*
+    Im Reiter *Konfiguration*:
+    *   `download_dir` – Zielordner (Standard: `/media`).
+    *   `metadata_country` – Ländercode für den iTunes-Abgleich (Standard: `DE`).
+    *   `openai_api_key` – optional, für KI-gestützte Titelerkennung.
+
+    *Stelle sicher, dass dein NAS in Home Assistant unter "Netzwerkspeicher" eingebunden ist, damit `/share` bzw. `/media` funktioniert.*
 
 4.  **Starten:**
     Klicke auf *Starten* und aktiviere den Schalter **"In der Seitenleiste anzeigen"**.
@@ -42,11 +50,13 @@ Die Lieder werden automatisch mit **Artist** (Kanalname) und **Titel** getaggt u
 
 ## 🛠️ Nutzung
 
-1.  Klicke in der linke Seitenleiste auf **Music Downloader**.
-2.  Gib einen Suchbegriff ein (z.B. "Eminem Not Afraid").
-3.  Das Add-on zeigt dir das beste Ergebnis mit Cover an.
-4.  Klicke auf **Download Selection**.
-5.  Nach wenigen Sekunden liegt die MP3 fertig getaggt in deinem Ordner! 🎶
+1.  Klicke in der linken Seitenleiste auf **Music Downloader**.
+2.  Tippe einen Songnamen (z.B. "Eminem Not Afraid") – wähle einen Vorschlag aus der Liste, um ihn als **Referenz** festzulegen, oder drücke Enter.
+3.  Die Ergebnisse zeigen oben die Referenz aus den Musikbibliotheken (inkl. Originallänge) und darunter alle Videos mit Abweichungs-Badge.
+4.  Klicke ein Video an: Player, Längenvergleich und die automatisch befüllten Metadaten erscheinen. Bei Bedarf einen anderen Bibliothekstreffer übernehmen oder Felder anpassen.
+5.  **Herunterladen** – Fortschritt siehst du oben rechts im Download-Menü. 🎶
+
+**Tastenkürzel:** `/` fokussiert die Suche, `↑`/`↓` wählen Vorschläge, `Esc` schließt Menüs bzw. die Videoansicht.
 
 ---
 
@@ -56,6 +66,7 @@ Die Lieder werden automatisch mit **Artist** (Kanalname) und **Titel** getaggt u
 *   **yt-dlp** (Download-Engine)
 *   **FFmpeg** (Konvertierung)
 *   **Mutagen** (ID3 Tagging)
+*   **MusicBrainz / iTunes Search / Deezer API** (Metadaten-Abgleich)
 *   **Alpine Linux** (Docker Base)
 
 ---
